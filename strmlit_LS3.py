@@ -257,7 +257,7 @@ line_chart = alt.Chart(df_line).mark_line(color='blue').encode(
 st.altair_chart(line_chart, use_container_width=True)
 
 st.markdown("""
-### ** Sensitivity Analysis Interpretation :**
+### Sensitivity Analysis Interpretation :
 - **Steep Slopes:** Indicate high sensitivity. Small changes in the selected metric lead to significant score variations.
 - **Flat Slopes:** Indicate low sensitivity. Changes in the metric have minimal impact on the score.
 - **Direction of Change:** 
