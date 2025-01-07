@@ -25,17 +25,16 @@ Adjust the **Weights** and **Metrics** using the controls in the sidebar. The ma
 **Leaderboard Score Formula:**
 
 \[
-  \t{Score} = (w_T * T) + (w_P * P) + (w_A * A) + (w_B * B) + (w_F * F) + (w_I * I) + (w_C * C) + (w_R * R)
+  \t{Score} = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_E * ECE) + (w_I * I) + (w_C * C)
 \]
 
-- **T:** TPR@FPR ≤ 0.20
-- **P:** PPV
+
 - **A:** AUC
-- **B:** Balanced Accuracy
-- **F:** F1 Score
+- **Ap:** AUPRC
+- **Nb:** Net Benefit
+- **ECE:** Expected Calibration Error            
 - **I:** Normalized Inference Time (Penalty)
 - **C:** Normalized Compute (Penalty)
-- **R:** Parsimony
 """)
 
 # ------------------------------
@@ -50,14 +49,12 @@ st.sidebar.subheader("🔧 Adjust Weights (Locked)")
 
 # Define fixed weights
 fixed_weights = {
-    'w_T': 0.30,  # Weight for TPR@FPR ≤ 0.20
-    'w_P': 0.20,  # Weight for PPV
-    'w_A': 0.20,  # Weight for AUC
-    'w_B': 0.15,  # Weight for Balanced Accuracy
-    'w_F': 0.10,  # Weight for F1 Score
+    'w_A': 0.25,  # Weight for AUC
+    'w_Ap': 0.35,  # Weight for AUPRC
+    'w_Nb': 0.30,  # Weight for NB Score
+    'w_ECE': -0.10,  # Weight for ECE
     'w_I': -0.05, # Penalty for Inference Time
     'w_C': -0.05, # Penalty for Compute Utilized
-    'w_R': 0.05   # Weight for Parsimony
 }
 
 # Display fixed weights as compact text
@@ -70,23 +67,6 @@ for key, value in fixed_weights.items():
 st.sidebar.subheader("📊 Adjust Metrics")
 
 # Define metric sliders
-T_val = st.sidebar.slider(
-    "T (TPR@FPR ≤ 0.20)",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.70,
-    step=0.01,
-    key='T_val'
-)
-
-P_val = st.sidebar.slider(
-    "P (PPV)",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.65,
-    step=0.01,
-    key='P_val'
-)
 
 A_val = st.sidebar.slider(
     "A (AUC)",
@@ -97,22 +77,31 @@ A_val = st.sidebar.slider(
     key='A_val'
 )
 
-B_val = st.sidebar.slider(
-    "B (Balanced Accuracy)",
+Ap_val = st.sidebar.slider(
+    "AUPRC (area under precision recall curve)",
     min_value=0.0,
     max_value=1.0,
     value=0.78,
     step=0.01,
-    key='B_val'
+    key='Ap_val'
 )
 
-F_val = st.sidebar.slider(
-    "F (F1 Score)",
+Nb_val = st.sidebar.slider(
+    "Nb (net benefit)",
     min_value=0.0,
     max_value=1.0,
     value=0.60,
     step=0.01,
-    key='F_val'
+    key='Nb_val'
+)
+
+ECE_val = st.sidebar.slider(
+    "ECE (Expected Calibration Error)",
+    min_value=0.0,
+    max_value=1.0,
+    value=0.60,
+    step=0.01,
+    key='ECE_val'
 )
 
 I_val = st.sidebar.slider(
@@ -133,42 +122,31 @@ C_val = st.sidebar.slider(
     key='C_val'
 )
 
-R_val = st.sidebar.slider(
-    "R (Parsimony)",
-    min_value=0.0,
-    max_value=1.0,
-    value=0.80,
-    step=0.01,
-    key='R_val'
-)
 
 # ------------------------------
 # Function to Compute Score
 # ------------------------------
-def compute_score(T, P, A, B, F, I, C, R,
+def compute_score(A, Ap, Nb, ECE,I, C, 
                  fixed_weights):
     """
     Compute the leaderboard score based on metrics and fixed weights.
     """
-    return (fixed_weights['w_T'] * T) + \
-           (fixed_weights['w_P'] * P) + \
-           (fixed_weights['w_A'] * A) + \
-           (fixed_weights['w_B'] * B) + \
-           (fixed_weights['w_F'] * F) + \
+    return (fixed_weights['w_A'] * A) + \
+           (fixed_weights['w_Ap'] * Ap) + \
+           (fixed_weights['w_Nb'] * Nb) + \
+           (fixed_weights['w_ECE'] * ECE) + \
            (fixed_weights['w_I'] * I) + \
-           (fixed_weights['w_C'] * C) + \
-           (fixed_weights['w_R'] * R)
+           (fixed_weights['w_C'] * C)
 
 # Compute the current score
 score = compute_score(
-    T=T_val,
-    P=P_val,
+   
     A=A_val,
-    B=B_val,
-    F=F_val,
+    Ap=Ap_val,
+    Nb=Nb_val,
+    ECE= ECE_val,
     I=I_val,
     C=C_val,
-    R=R_val,
     fixed_weights=fixed_weights
 )
 
@@ -189,11 +167,12 @@ with score_col2:
 ## Explanation section
 st.markdown("""
 ### How to Interpret This
-- Increase T to see how capturing more critical positives at low FPR affects score.
-- Increase P to boost PPV, ensuring flagged cases are truly high-risk.
-- A, B, and F influence overall discriminative ability, balanced performance, and precision-recall tradeoffs.
-- I and C penalize slow or resource-heavy models; increasing these reduces the final score.
-- R rewards simpler (more parsimonious) models. Increasing R raises the final score.
+- **A (AUC):** Measures the discrimination ability of the model across all thresholds (how well the model distinguishes between positive and negative classes).
+- **AUPRC :** Focuses on precision and recall for the positive class (mortality), especially valuable in imbalanced datasets.
+- **Nb (Net Benefit):** Measures the clinical utility, evaluate if benefits of using a model outweigh its potential harms.
+- **ECE (Expected Calibration Error):** Measures the calibration of predicted probabilities, ensuring that the predicted probability matches the true outcome.
+- **I (Normalized Inference Time):** Penalty for high inference time, ensuring that the model’s prediction time remains efficient in real-world deployment.
+- **C (Normalized Compute):** Penalty for high compute cost, considering the resources needed for running the model (important in resource-constrained environments).
 """)
 
 # ------------------------------
@@ -206,7 +185,7 @@ Select a metric to vary and observe how it affects the leaderboard score. This h
 """)
 
 # Dropdown to select which metric to vary
-metric_to_vary = st.selectbox("Select a metric to vary:", ["T", "P", "A", "B", "F", "I", "C", "R"])
+metric_to_vary = st.selectbox("Select a metric to vary:", [ "A", "Ap", "Nb", "ECE", "I", "C"])
 
 # Generate data for the selected metric variation
 var_range = np.linspace(0, 1, 100)
@@ -215,25 +194,21 @@ scores = []
 for val in var_range:
     # Update the selected metric while keeping others constant
     current_metrics = {
-        'T': T_val,
-        'P': P_val,
         'A': A_val,
-        'B': B_val,
-        'F': F_val,
+        'Ap': Ap_val,
+        'Nb': Nb_val,
+        'ECE': ECE_val,
         'I': I_val,
-        'C': C_val,
-        'R': R_val
+        'C': C_val
     }
     current_metrics[metric_to_vary] = val
     s = compute_score(
-        T=current_metrics['T'],
-        P=current_metrics['P'],
         A=current_metrics['A'],
-        B=current_metrics['B'],
-        F=current_metrics['F'],
+        Ap=current_metrics['Ap'],
+        Nb=current_metrics['Nb'],
+        ECE=current_metrics['ECE'],
         I=current_metrics['I'],
         C=current_metrics['C'],
-        R=current_metrics['R'],
         fixed_weights=fixed_weights
     )
     scores.append(s)
@@ -261,7 +236,7 @@ st.markdown("""
 - **Steep Slopes:** Indicate high sensitivity. Small changes in the selected metric lead to significant score variations.
 - **Flat Slopes:** Indicate low sensitivity. Changes in the metric have minimal impact on the score.
 - **Direction of Change:** 
-  - **Positive Metrics (T, P, A, B, F, R):** Typically, increasing these improves the score.
-  - **Penalty Metrics (I, C):** Increasing these reduces the score.
+  - **Positive Metrics (A, Ap, Nb):** Typically, increasing these improves the score.
+  - **Penalty Metrics (ECE, I, C):** Increasing these reduces the score.
 """)
 
