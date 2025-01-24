@@ -7,7 +7,7 @@ import numpy as np
 # Set Page Configuration
 # ------------------------------
 st.set_page_config(
-    page_title="🏆 Leaderboard Score Sensitivity Analysis",
+    page_title="🏆 Leaderboard Scoring",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -25,14 +25,14 @@ Adjust the **Weights** and **Metrics** using the controls in the sidebar. The ma
 **Leaderboard Score Formula:**
 
 \[
-  \t{Score} = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_E * ECE) + (w_I * I) + (w_C * C)
+  \t{Score} = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_E * ECE) - (w_I * I) - (w_C * C)
 \]
 
 
 - **A:** AUC
 - **Ap:** AUPRC
 - **Nb:** Net Benefit
-- **ECE:** Expected Calibration Error            
+- **ECE:** Expected Calibration Error (Penalty)            
 - **I:** Normalized Inference Time (Penalty)
 - **C:** Normalized Compute (Penalty)
 """)
@@ -43,23 +43,88 @@ Adjust the **Weights** and **Metrics** using the controls in the sidebar. The ma
 st.sidebar.header("⚙️ Settings")
 
 # ------------------------------
-# Adjust Weights (Locked Display)
+# Sidebar: Adjust Weights (Adjustable Range)
 # ------------------------------
-st.sidebar.subheader("🔧 Adjust Weights (Locked)")
+st.sidebar.subheader("🔧 Adjust Weights")
 
 # Define fixed weights
 fixed_weights = {
     'w_A': 0.25,  # Weight for AUC
     'w_Ap': 0.35,  # Weight for AUPRC
     'w_Nb': 0.30,  # Weight for NB Score
-    'w_ECE': -0.10,  # Weight for ECE
-    'w_I': -0.05, # Penalty for Inference Time
-    'w_C': -0.05, # Penalty for Compute Utilized
+    'w_ECE': 0.10,  # Weight for ECE
+    'w_I': 0.05, # Penalty for Inference Time
+    'w_C': 0.05, # Penalty for Compute Utilized
+}
+
+# Define weight sliders with intuitive ranges
+w_A = st.sidebar.slider(
+    "w_A (Weight for AUC)",
+    min_value=0.0,
+    max_value=1.0,
+    value=fixed_weights['w_A'],
+    step=0.01,
+    key="w_A"
+)
+
+w_Ap = st.sidebar.slider(
+    "w_Ap (Weight for AUPRC)",
+    min_value=0.0,
+    max_value=1.0,
+    value=fixed_weights['w_Ap'],
+    step=0.01,
+    key="w_Ap"
+)
+
+w_Nb = st.sidebar.slider(
+    "w_Nb (Weight for Net Benefit)",
+    min_value=0.0,
+    max_value=1.0,
+    value=fixed_weights['w_Nb'],
+    step=0.01,
+    key="w_Nb"
+)
+
+w_ECE = st.sidebar.slider(
+    "w_ECE (Weight for Calibration Error - Penalty)",
+    min_value=0.0,
+    max_value=0.2,
+    value=fixed_weights['w_ECE'],
+    step=0.01,
+    key="w_ECE"
+)
+
+w_I = st.sidebar.slider(
+    "w_I (Weight for Inference Time - Penalty)",
+    min_value=0.0,
+    max_value=0.2,
+    value=fixed_weights['w_I'],
+    step=0.01,
+    key="w_I"
+)
+
+w_C = st.sidebar.slider(
+    "w_C (Weight for Compute - Penalty)",
+    min_value=0.0,
+    max_value=0.2,
+    value=fixed_weights['w_C'],
+    step=0.01,
+    key="w_C"
+)
+
+# Dynamically update weights dictionary
+dynamic_weights = {
+    'w_A': w_A,
+    'w_Ap': w_Ap,
+    'w_Nb': w_Nb,
+    'w_ECE': w_ECE,
+    'w_I': w_I,
+    'w_C': w_C,
 }
 
 # Display fixed weights as compact text
-for key, value in fixed_weights.items():
-    st.sidebar.markdown(f"**{key}:** {value}")
+#for key, value in fixed_weights.items():
+#    st.sidebar.markdown(f"**{key}:** {value}")
 
 # ------------------------------
 # Adjust Metrics (Adjustable Sliders)
@@ -124,7 +189,7 @@ C_val = st.sidebar.slider(
 
 
 # ------------------------------
-# Function to Compute Score
+# Function to Compute Score using Fixed Weights
 # ------------------------------
 def compute_score(A, Ap, Nb, ECE,I, C, 
                  fixed_weights):
@@ -138,6 +203,21 @@ def compute_score(A, Ap, Nb, ECE,I, C,
            (fixed_weights['w_I'] * I) + \
            (fixed_weights['w_C'] * C)
 
+# ------------------------------
+# Function to Compute Score using dynamic weights
+# ------------------------------
+def compute_score_dynamic(A, Ap, Nb, ECE, I, C, weights):
+    """
+    Compute the leaderboard score dynamically based on adjustable weights.
+    """
+    return (weights['w_A'] * A) + \
+           (weights['w_Ap'] * Ap) + \
+           (weights['w_Nb'] * Nb) + \
+           (weights['w_ECE'] * ECE) + \
+           (weights['w_I'] * I) + \
+           (weights['w_C'] * C)
+
+
 # Compute the current score
 score = compute_score(
    
@@ -150,19 +230,34 @@ score = compute_score(
     fixed_weights=fixed_weights
 )
 
-# ------------------------------
-# Main Page: Display Score
-# ------------------------------
-st.markdown("## 🏅 Current Leaderboard Score")
 
-# Display the numeric score prominently
+# Compute the current score with dynamic weights
+score_dynamic = compute_score_dynamic(
+    A=A_val,
+    Ap=Ap_val,
+    Nb=Nb_val,
+    ECE=ECE_val,
+    I=I_val,
+    C=C_val,
+    weights=dynamic_weights
+)
+# ------------------------------
+# Main Page: Display Score with Dynamic Weights
+# ------------------------------
+st.markdown("## 🏅 Current Leaderboard Score (Dynamic Weights)")
+
+# Normalize the score to fall within [0.0, 1.0] for the progress bar
+normalized_score = min(max(score_dynamic, 0.0), 1.0)
+
+# Display the numeric score and progress bar
 score_col1, score_col2 = st.columns([1, 3])
 
 with score_col1:
-    st.markdown(f"### **{score:.4f}**")
+    st.markdown(f"### **{score_dynamic:.4f}**")
 
 with score_col2:
-    st.progress(score)
+    st.progress(normalized_score)
+
 
 ## Explanation section
 st.markdown("""
@@ -176,20 +271,28 @@ st.markdown("""
 """)
 
 # ------------------------------
-# Sensitivity Analysis Section
+# Sensitivity Analysis with Dynamic Weights
 # ------------------------------
-st.markdown("## 🔍 Sensitivity Analysis")
+st.markdown("## 🔍 Sensitivity Analysis with Dynamic Weights")
 
-st.markdown("""
-Select a metric to vary and observe how it affects the leaderboard score. This helps in understanding which metrics have the most significant impact on the overall score.
-""")
+# Define ranges dynamically based on the sidebar sliders
+metric_ranges = {
+    "A": (0.0, 1.0),  # AUC range
+    "Ap": (0.0, 1.0),  # AUPRC range
+    "Nb": (0.0, 1.0),  # Net Benefit range
+    "ECE": (0.0, 1.0),  # ECE range
+    "I": (0.0, 1.0),  # Inference Time range
+    "C": (0.0, 1.0),  # Compute range
+}
 
 # Dropdown to select which metric to vary
-metric_to_vary = st.selectbox("Select a metric to vary:", [ "A", "Ap", "Nb", "ECE", "I", "C"])
+metric_to_vary = st.selectbox("Select a metric to vary:", ["A", "Ap", "Nb", "ECE", "I", "C"])
 
-# Generate data for the selected metric variation
-var_range = np.linspace(0, 1, 100)
-scores = []
+# Generate range dynamically for the selected metric
+var_range = np.linspace(metric_ranges[metric_to_vary][0], metric_ranges[metric_to_vary][1], 100)
+
+# Generate scores for sensitivity analysis
+scores_dynamic = []
 
 for val in var_range:
     # Update the selected metric while keeping others constant
@@ -202,34 +305,34 @@ for val in var_range:
         'C': C_val
     }
     current_metrics[metric_to_vary] = val
-    s = compute_score(
+    s_dynamic = compute_score_dynamic(
         A=current_metrics['A'],
         Ap=current_metrics['Ap'],
         Nb=current_metrics['Nb'],
         ECE=current_metrics['ECE'],
         I=current_metrics['I'],
         C=current_metrics['C'],
-        fixed_weights=fixed_weights
+        weights=dynamic_weights
     )
-    scores.append(s)
+    scores_dynamic.append(s_dynamic)
 
 # Create a DataFrame for plotting
-df_line = pd.DataFrame({
+df_line_dynamic = pd.DataFrame({
     metric_to_vary: var_range,
-    'Score': scores
+    'Score': scores_dynamic
 })
 
 # Create the line chart using Altair
-line_chart = alt.Chart(df_line).mark_line(color='blue').encode(
+line_chart_dynamic = alt.Chart(df_line_dynamic).mark_line(color='green').encode(
     x=alt.X(f"{metric_to_vary}:Q", title=f"{metric_to_vary} Value"),
-    y=alt.Y('Score:Q', title='Score', scale=alt.Scale(domain=[0,1])),
+    y=alt.Y('Score:Q', title='Score', scale=alt.Scale(domain=[min(scores_dynamic), max(scores_dynamic)])),
     tooltip=[f"{metric_to_vary}:Q", 'Score:Q']
 ).properties(
     width=800,
     height=400
 ).interactive()
 
-st.altair_chart(line_chart, use_container_width=True)
+st.altair_chart(line_chart_dynamic, use_container_width=True)
 
 st.markdown("""
 ### Sensitivity Analysis Interpretation :
