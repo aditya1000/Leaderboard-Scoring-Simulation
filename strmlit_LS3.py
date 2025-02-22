@@ -50,7 +50,9 @@ dynamic_weights = {
 # ------------------------------
 # Sidebar: Navigation
 # ------------------------------
-page = st.sidebar.radio("Navigation", ["Leaderboard Ranking", "Score Sensitivity Analysis"])
+#page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis", "Leaderboard Ranking"])
+page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis"])
+
 
 if page == "Leaderboard Ranking":
     # =============================================================================
