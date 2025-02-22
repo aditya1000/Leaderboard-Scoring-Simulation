@@ -3,6 +3,7 @@ import altair as alt
 import pandas as pd
 import numpy as np
 import json
+import os
 
 # ------------------------------
 # Set Page Configuration
@@ -14,233 +15,227 @@ st.set_page_config(
 )
 
 # ------------------------------
+# Sidebar: Common Score Weights
+# ------------------------------
+st.sidebar.subheader("🔧 Score Weights")
+
+# Default (fixed) weights for each metric
+fixed_weights = {
+    'w_A': 0.25,   # Weight for AUC
+    'w_Ap': 0.35,  # Weight for AUPRC
+    'w_Nb': 0.30,  # Weight for Net Benefit
+    'w_ECE': 0.10, # Weight for ECE (Penalty)
+    'w_I': 0.05,   # Weight for Inference Time (Penalty)
+    'w_C': 0.05,   # Weight for Compute (Penalty)
+}
+
+w_A = st.sidebar.slider("w_A (Weight for AUC)", 0.0, 1.0, fixed_weights['w_A'], 0.01, key="w_A")
+w_Ap = st.sidebar.slider("w_Ap (Weight for AUPRC)", 0.0, 1.0, fixed_weights['w_Ap'], 0.01, key="w_Ap")
+w_Nb = st.sidebar.slider("w_Nb (Weight for Net Benefit)", 0.0, 1.0, fixed_weights['w_Nb'], 0.01, key="w_Nb")
+w_ECE = st.sidebar.slider("w_ECE (Weight for ECE - Penalty)", 0.0, 0.2, fixed_weights['w_ECE'], 0.01, key="w_ECE")
+w_I = st.sidebar.slider("w_I (Weight for Inference Time - Penalty)", 0.0, 0.2, fixed_weights['w_I'], 0.01, key="w_I")
+w_C = st.sidebar.slider("w_C (Weight for Compute - Penalty)", 0.0, 0.2, fixed_weights['w_C'], 0.01, key="w_C")
+
+dynamic_weights = {
+    'w_A': w_A,
+    'w_Ap': w_Ap,
+    'w_Nb': w_Nb,
+    'w_ECE': w_ECE,
+    'w_I': w_I,
+    'w_C': w_C,
+}
+
+
+
+# ------------------------------
 # Sidebar: Navigation
 # ------------------------------
 page = st.sidebar.radio("Navigation", ["Leaderboard Ranking", "Score Sensitivity Analysis"])
 
 if page == "Leaderboard Ranking":
-# =============================================================================
-# Page 1: Leaderboard Ranking
-# =============================================================================
+    # =============================================================================
+    # Page 1: Leaderboard Ranking
+    # =============================================================================
     st.title("🏆 Leaderboard Ranking")
-    st.markdown("""
-    The leaderboard rankings are automatically loaded from the JSON file **leaderboard.json** in the root directory.
+    json_file = "leaderboard_with_info.json"
+
+    def compute_score_json(team_data, weights):
+        # Compute overall score using the given weights.
+        # Here, team_data["Compute"] is assumed to be a list and index 1 is used.
+        return (weights['w_A'] * team_data["AUC"]) + \
+               (weights['w_Ap'] * team_data["AUPRC"]) + \
+               (weights['w_Nb'] * team_data["Net Benefit"]) - \
+               (weights['w_ECE'] * team_data["ECE"]) - \
+               (weights['w_I'] * team_data["Inference Time"]) - \
+               (weights['w_C'] * team_data["Compute"][1])
     
-    **Expected JSON Format:**  
-    ```json
-    [
-      {"team": "Team A", "score": 0.92},
-      {"team": "Team B", "score": 0.85},
-      {"team": "Team C", "score": 0.78}
-    ]
-    ```
-    """)
+    # Define a simple mapping of country names to flag emojis.
+    flag_dict = {
+    "Cameroon": "🇨🇲",
+    "Canada": "🇨🇦",
+    "China": "🇨🇳",
+    "Germany": "🇩🇪",
+    "India": "🇮🇳",
+    "Kenya": "🇰🇪",
+    "Pakistan": "🇵🇰",
+    "Romania": "🇷🇴",
+    "South Africa": "🇿🇦",
+    "South Korea": "🇰🇷",
+    "Switzerland": "🇨🇭",
+    "Uganda": "🇺🇬",
+    "UK": "🇬🇧",
+    "USA": "🇺🇸"
+    }
 
-    # Define the path to the JSON file in the root directory.
-    json_file = "leaderboard.json"
-
+    def country_to_flag(country_str):
+        # Split on commas and trim spaces; convert each country to its flag.
+        countries = [c.strip() for c in country_str.split(",")]
+        flags = [flag_dict.get(c, c) for c in countries]
+        return " ".join(flags)
+    
     try:
         with open(json_file, "r") as f:
             data = json.load(f)
         
-        # Create a DataFrame and validate the required columns.
+        # Convert JSON data to DataFrame.
         df_leaderboard = pd.DataFrame(data)
-        if 'team' not in df_leaderboard.columns or 'score' not in df_leaderboard.columns:
-            st.error("The JSON file must contain keys 'team' and 'score'.")
+        
+        # Check that required keys exist.
+        required_keys = {"team", "AUC", "AUPRC", "Net Benefit", "ECE", "Inference Time", "Compute", "Institution", "Country"}
+        if not required_keys.issubset(df_leaderboard.columns):
+            st.error("The JSON file must contain the keys: " + ", ".join(required_keys))
         else:
-            df_leaderboard = df_leaderboard.sort_values("score", ascending=False)
-            st.subheader("Leaderboard Ranking")
-            st.table(df_leaderboard)
+            # Compute score for each team using dynamic weights.
+            df_leaderboard["Score"] = df_leaderboard.apply(lambda row: compute_score_json(row, dynamic_weights), axis=1)
+            
+            # Sort by score (descending).
+            df_leaderboard = df_leaderboard.sort_values("Score", ascending=False)
+            df_leaderboard["Rank"] = range(1, len(df_leaderboard) + 1)
+            
+            # Split the Compute column into two separate columns.
+            df_leaderboard["Compute_1"] = df_leaderboard["Compute"].apply(lambda x: x[0] if isinstance(x, list) and len(x) > 0 else None)
+            df_leaderboard["Compute_2"] = df_leaderboard["Compute"].apply(lambda x: x[1] if isinstance(x, list) and len(x) > 1 else None)
+            
+            # Create a new column "Country_Flag" by converting the Country field into flag(s).
+            df_leaderboard["Country_Flag"] = df_leaderboard["Country"].apply(country_to_flag)
+            
+            # Create a combined field "teamInfo" with newlines.
+            df_leaderboard["teamInfo"] = df_leaderboard["team"].str.strip() + "\n(" + \
+                                          df_leaderboard["Institution"].str.strip() + ",\n" + \
+                                          df_leaderboard["Country_Flag"].str.strip() + ")"
+            
+            # Remove duplicate entries based on the team field.
+            df_leaderboard = df_leaderboard.drop_duplicates(subset=["team"], keep="first")
+            
+            # Define the display columns (omitting the "Rank" column).
+            #display_cols = ["team","Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Inference Time", "Compute_1", "Compute_2"]
+            
+            st.subheader("Full Leaderboard Ranking")
+            
+            # Define the internal display columns.
+            display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Inference Time", "Compute_1", "Compute_2"]
 
-            # Create a bar chart of the leaderboard
+            # Mapping from your internal column names to the names you want to show.
+            rename_dict = {
+                "team": "Team Name",
+                "Country_Flag": "Country",
+                "Score": "Score",
+                "AUC": "AUC",
+                "AUPRC": "AUPRC",
+                "Net Benefit": "Net Benefit",
+                "ECE": "ECE",
+                "Inference Time": "Inference Time",
+                "Compute_1": "Memory Usage (MB)",
+                "Compute_2": "CPU time (s)"
+            }
+
+            # Create a new DataFrame for display:
+            df_display = df_leaderboard[display_cols].rename(columns=rename_dict).reset_index(drop=True)
+
+            # Replace the index with blank strings so it doesn't show any row numbers.
+            #df_display.index = [''] * len(df_display)
+
+            # Display the DataFrame with st.dataframe().
+            st.dataframe(df_display, hide_index=True)
+            
+            # Reset index and style the DataFrame to hide the index and preserve newlines.
+            #styled_df = df_leaderboard[display_cols].reset_index(drop=True).style.set_properties(
+            #    subset=["team"], **{'white-space': 'pre-wrap'}
+            #).hide(axis="index")
+            #st.write(styled_df.to_html(), unsafe_allow_html=True)
+            
+            # Create a bar chart showing team scores using teamInfo as the label.
             chart = alt.Chart(df_leaderboard).mark_bar().encode(
-                x=alt.X("score:Q", title="Score"),
-                y=alt.Y("team:N", sort="-x", title="Team")
+                x=alt.X("Score:Q", title="Score"),
+                y=alt.Y("team:N", sort="-x", title="Team"),
+                tooltip=display_cols
             ).properties(width=600, height=400)
             st.altair_chart(chart, use_container_width=True)
+            
     except FileNotFoundError:
         st.error(f"The file '{json_file}' was not found in the root directory. Please add the file and try again.")
     except Exception as e:
         st.error(f"An error occurred while reading the JSON file: {e}")
-
+        
+    
 elif page == "Score Sensitivity Analysis":
 # =============================================================================
 # Page 2: Score Sensitivity Analysis
 # =============================================================================
-    # ------------------------------
-    # Title and Description
-    # ------------------------------
     st.title("🏆 Leaderboard Score Sensitivity Analysis")
-
+    
     st.markdown("""
     Welcome to the **Leaderboard Score Sensitivity Analysis** tool for the **Pediatric Sepsis Data Challenge**!
 
-    Adjust the **Weights** and **Metrics** using the controls in the sidebar. The main area will display the current leaderboard score and an interactive sensitivity analysis plot to show how changes in metrics affect the score.
+    Adjust the **Weights** using the controls in the sidebar and the **Metrics** below. The main area will display the current leaderboard score and an interactive sensitivity analysis plot to show how changes in metrics affect the score.
 
     **Leaderboard Score Formula:**
 
     \[
-    \t{Score} = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_E * ECE) - (w_I * I) - (w_C * C)
+      Score = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_ECE * ECE) - (w_I * I) - (w_C * C)
     \]
 
-
-    - **A:** AUC
-    - **Ap:** AUPRC
-    - **Nb:** Net Benefit
+    - **A:** AUC  
+    - **Ap:** AUPRC  
+    - **Nb:** Net Benefit  
     - **ECE:** Expected Calibration Error (Penalty)            
-    - **I:** Normalized Inference Time (Penalty)
+    - **I:** Normalized Inference Time (Penalty)  
     - **C:** Normalized Compute (Penalty)
     """)
 
-    # ------------------------------
-    # Sidebar: Adjust Weights and Metrics
-    # ------------------------------
-    st.sidebar.header("⚙️ Settings")
-
-    # ------------------------------
-    # Sidebar: Adjust Weights (Adjustable Range)
-    # ------------------------------
-    st.sidebar.subheader("🔧 Adjust Weights")
-
-    # Define fixed weights
-    fixed_weights = {
-        'w_A': 0.25,  # Weight for AUC
-        'w_Ap': 0.35,  # Weight for AUPRC
-        'w_Nb': 0.30,  # Weight for NB Score
-        'w_ECE': 0.10,  # Weight for ECE
-        'w_I': 0.05, # Penalty for Inference Time
-        'w_C': 0.05, # Penalty for Compute Utilized
-    }
-
-    # Define weight sliders with intuitive ranges
-    w_A = st.sidebar.slider(
-        "w_A (Weight for AUC)",
-        min_value=0.0,
-        max_value=1.0,
-        value=fixed_weights['w_A'],
-        step=0.01,
-        key="w_A"
-    )
-
-    w_Ap = st.sidebar.slider(
-        "w_Ap (Weight for AUPRC)",
-        min_value=0.0,
-        max_value=1.0,
-        value=fixed_weights['w_Ap'],
-        step=0.01,
-        key="w_Ap"
-    )
-
-    w_Nb = st.sidebar.slider(
-        "w_Nb (Weight for Net Benefit)",
-        min_value=0.0,
-        max_value=1.0,
-        value=fixed_weights['w_Nb'],
-        step=0.01,
-        key="w_Nb"
-    )
-
-    w_ECE = st.sidebar.slider(
-        "w_ECE (Weight for Calibration Error - Penalty)",
-        min_value=0.0,
-        max_value=0.2,
-        value=fixed_weights['w_ECE'],
-        step=0.01,
-        key="w_ECE"
-    )
-
-    w_I = st.sidebar.slider(
-        "w_I (Weight for Inference Time - Penalty)",
-        min_value=0.0,
-        max_value=0.2,
-        value=fixed_weights['w_I'],
-        step=0.01,
-        key="w_I"
-    )
-
-    w_C = st.sidebar.slider(
-        "w_C (Weight for Compute - Penalty)",
-        min_value=0.0,
-        max_value=0.2,
-        value=fixed_weights['w_C'],
-        step=0.01,
-        key="w_C"
-    )
-
-    # Dynamically update weights dictionary
-    dynamic_weights = {
-        'w_A': w_A,
-        'w_Ap': w_Ap,
-        'w_Nb': w_Nb,
-        'w_ECE': w_ECE,
-        'w_I': w_I,
-        'w_C': w_C,
-    }
-
-    # Display fixed weights as compact text
-    #for key, value in fixed_weights.items():
-    #    st.sidebar.markdown(f"**{key}:** {value}")
-
-    # ------------------------------
-    # Adjust Metrics (Adjustable Sliders)
-    # ------------------------------
     st.sidebar.subheader("📊 Adjust Metrics")
+    A_val = st.sidebar.slider("A (AUC)", 0.0, 1.0, 0.85, 0.01, key="ms_A_val")
+    Ap_val = st.sidebar.slider("AUPRC", 0.0, 1.0, 0.78, 0.01, key="ms_Ap_val")
+    Nb_val = st.sidebar.slider("Net Benefit", 0.0, 1.0, 0.60, 0.01, key="ms_Nb_val")
+    ECE_val = st.sidebar.slider("ECE", 0.0, 1.0, 0.60, 0.01, key="ms_ECE_val")
+    I_val = st.sidebar.slider("Inference Time", 0.0, 1.0, 0.25, 0.01, key="ms_I_val")
+    C_val = st.sidebar.slider("Compute", 0.0, 1.0, 0.25, 0.01, key="ms_C_val")
 
-    # Define metric sliders
+    def compute_score(A, Ap, Nb, ECE, I, C, weights):
+        return (weights['w_A'] * A) + \
+               (weights['w_Ap'] * Ap) + \
+               (weights['w_Nb'] * Nb) - \
+               (weights['w_ECE'] * ECE) - \
+               (weights['w_I'] * I) - \
+               (weights['w_C'] * C)
 
-    A_val = st.sidebar.slider(
-        "A (AUC)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.85,
-        step=0.01,
-        key='A_val'
-    )
+    score_dynamic = compute_score(A=A_val, Ap=Ap_val, Nb=Nb_val, ECE=ECE_val, I=I_val, C=C_val, weights=dynamic_weights)
 
-    Ap_val = st.sidebar.slider(
-        "AUPRC (area under precision recall curve)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.78,
-        step=0.01,
-        key='Ap_val'
-    )
+    st.markdown("## 🏅 Current Leaderboard Score (Dynamic Weights)")
+    normalized_score = min(max(score_dynamic, 0.0), 1.0)
+    score_col1, score_col2 = st.columns([1, 3])
+    with score_col1:
+        st.markdown(f"### **{score_dynamic:.4f}**")
+    with score_col2:
+        st.progress(normalized_score)
 
-    Nb_val = st.sidebar.slider(
-        "Nb (net benefit)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.60,
-        step=0.01,
-        key='Nb_val'
-    )
-
-    ECE_val = st.sidebar.slider(
-        "ECE (Expected Calibration Error)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.60,
-        step=0.01,
-        key='ECE_val'
-    )
-
-    I_val = st.sidebar.slider(
-        "I (Normalized Inference Time)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.25,
-        step=0.01,
-        key='I_val'
-    )
-
-    C_val = st.sidebar.slider(
-        "C (Normalized Compute)",
-        min_value=0.0,
-        max_value=1.0,
-        value=0.25,
-        step=0.01,
-        key='C_val'
-    )
+    # Display the dynamic weights as a bar chart
+    st.markdown("### Dynamic Weights Breakdown")
+    weights_df = pd.DataFrame({
+        "Metric": list(dynamic_weights.keys()),
+        "Weight": list(dynamic_weights.values())
+    })
+    st.bar_chart(weights_df.set_index("Metric"))
 
 
     # ------------------------------
@@ -348,6 +343,21 @@ elif page == "Score Sensitivity Analysis":
 
     # Generate scores for sensitivity analysis
     scores_dynamic = []
+
+    # ------------------------------
+    # Function to Compute Score using dynamic weights
+    # ------------------------------
+    def compute_score_dynamic(A, Ap, Nb, ECE, I, C, weights):
+        """
+        Compute the leaderboard score dynamically based on adjustable weights.
+        """
+        return (weights['w_A'] * A) + \
+            (weights['w_Ap'] * Ap) + \
+            (weights['w_Nb'] * Nb) + \
+            (weights['w_ECE'] * ECE) + \
+            (weights['w_I'] * I) + \
+            (weights['w_C'] * C)
+
 
     for val in var_range:
         # Update the selected metric while keeping others constant

@@ -1,0 +1,407 @@
+[
+    {
+        "team": "TheDataLifesavers",
+        "AUC": 0.8816622837882885,
+        "AUPRC": 0.33676826107271646,
+        "Net Benefit": 0.004344048653344918,
+        "ECE": 0.01316099667680278,
+        "Inference Time": 0.0039029466666666668,
+        "Compute": [
+            130.88671875,
+            0.52
+        ],
+        "Institution": "University of British Columbia, WALIMU, Kabale University",
+        "Country": "Canada, Uganda"
+    },
+    {
+        "team": "BadgerDataScience",
+        "AUC": 0.8132986406903959,
+        "AUPRC": 0.19640766117780295,
+        "Net Benefit": 0.0,
+        "ECE": 0.011811680278019114,
+        "Inference Time": 0.00012384333333333332,
+        "Compute": [
+            121.4375,
+            0.52
+        ],
+        "Institution": "University of Wisconsin ",
+        "Country": "USA"
+    },
+    {
+        "team": "BadgerDataScience",
+        "AUC": 0.8132986406903959,
+        "AUPRC": 0.19640766117780295,
+        "Net Benefit": 0.0,
+        "ECE": 0.011811680278019114,
+        "Inference Time": 0.00012384333333333332,
+        "Compute": [
+            121.4375,
+            0.52
+        ],
+        "Institution": "University of Wisconsin",
+        "Country": "USA"
+    },
+    {
+        "team": "Epiphany",
+        "AUC": 0.8453831623393459,
+        "AUPRC": 0.4173971907833353,
+        "Net Benefit": 0.005212858384013901,
+        "ECE": 0.02333273006689835,
+        "Inference Time": 4.70075e-05,
+        "Compute": [
+            131.0390625,
+            0.63
+        ],
+        "Institution": "nan",
+        "Country": "USA"
+    },
+    {
+        "team": "UBCDigitalHealthInnovationLab",
+        "AUC": 0.8439386643949776,
+        "AUPRC": 0.3536302630323285,
+        "Net Benefit": 0.0008688097306689834,
+        "ECE": 0.013180474265855781,
+        "Inference Time": 6.831083333333334e-05,
+        "Compute": [
+            134.6484375,
+            0.5900000000000001
+        ],
+        "Institution": "University of British Columbia",
+        "Country": "Canada"
+    },
+    {
+        "team": "DataKite",
+        "AUC": 0.5173432349346272,
+        "AUPRC": 0.17371368526699268,
+        "Net Benefit": -0.9148566463944396,
+        "ECE": 0.8615543301476977,
+        "Inference Time": 5.0865e-05,
+        "Compute": [
+            139.75,
+            2.54189568
+        ],
+        "Institution": "Bundesinstitut f\u00fcr Risikobewertung",
+        "Country": "India, Switzerland, Germany, Romania"
+    },
+    {
+        "team": "OHSU",
+        "AUC": 0.8298085114263491,
+        "AUPRC": 0.23573241828952216,
+        "Net Benefit": -0.0008688097306689827,
+        "ECE": 0.026223111487228494,
+        "Inference Time": 9.327083333333333e-05,
+        "Compute": [
+            133.75,
+            5.71424736
+        ],
+        "Institution": "Oregon Health & Science University",
+        "Country": "USA"
+    },
+    {
+        "team": "AutonLab",
+        "AUC": 0.679543686803215,
+        "AUPRC": 0.1670527284436806,
+        "Net Benefit": -0.006081668114682885,
+        "ECE": 0.017703814161598608,
+        "Inference Time": 0.00020828833333333334,
+        "Compute": [
+            128.890625,
+            0.5
+        ],
+        "Institution": "Carnegie Mellon University",
+        "Country": "USA"
+    },
+    {
+        "team": "TeamAIMS",
+        "AUC": 0.873439757028038,
+        "AUPRC": 0.44534869483849754,
+        "Net Benefit": 0.004344048653344918,
+        "ECE": 0.014947877784535185,
+        "Inference Time": 6.546333333333334e-05,
+        "Compute": [
+            137.125,
+            5.785172736
+        ],
+        "Institution": "AIMS Cameroon",
+        "Country": "Cameroon, Canada"
+    },
+    {
+        "team": "PakSepsisSquad",
+        "AUC": 0.6577200577200577,
+        "AUPRC": 0.0727572466954251,
+        "Net Benefit": -0.14516129032258066,
+        "ECE": 0.319298503101737,
+        "Inference Time": 1.1109166666666667e-05,
+        "Compute": [
+            129.4296875,
+            2.21875
+        ],
+        "Institution": "nan",
+        "Country": "Pakistan"
+    },
+    {
+        "team": "Pulse",
+        "AUC": 0.8570872995296123,
+        "AUPRC": 0.29893603824817133,
+        "Net Benefit": 0.0,
+        "ECE": 0.013959311549087753,
+        "Inference Time": 0.00017169916666666667,
+        "Compute": [
+            125.65234375,
+            0.45999999999999996
+        ],
+        "Institution": "China Pharmaceutical University",
+        "Country": "China"
+    },
+    {
+        "team": "AUCAlliance",
+        "AUC": 0.5492518241416349,
+        "AUPRC": 0.281351099530157,
+        "Net Benefit": -0.7167680278019114,
+        "ECE": 0.6260538983492616,
+        "Inference Time": 0.00014570833333333333,
+        "Compute": [
+            135.28515625,
+            0.55
+        ],
+        "Institution": "nan",
+        "Country": "Canada"
+    },
+    {
+        "team": "TeamSimba",
+        "AUC": 0.8408644764620912,
+        "AUPRC": 0.27796636359732074,
+        "Net Benefit": 0.0,
+        "ECE": 0.015114092180712423,
+        "Inference Time": 0.00041747416666666667,
+        "Compute": [
+            134.62109375,
+            1.67
+        ],
+        "Institution": "KEMRI-Wellcome Trust Research Programme",
+        "Country": "Kenya"
+    },
+    {
+        "team": "SacredHeartHospitalPensacola",
+        "AUC": 0.6362437886624074,
+        "AUPRC": 0.11360257651611305,
+        "Net Benefit": -0.00929368029739777,
+        "ECE": 0.043835033396641264,
+        "Inference Time": 7.158666666666666e-05,
+        "Compute": [
+            129.078125,
+            5.703963256000001
+        ],
+        "Institution": "Sacred Heart Hospital Pensacola",
+        "Country": "USA"
+    },
+    {
+        "team": "DataScienceTeamAtNationwide",
+        "AUC": 0.8508463276417645,
+        "AUPRC": 0.1941926793221115,
+        "Net Benefit": -0.010425716768027801,
+        "ECE": 0.04134673680464813,
+        "Inference Time": 0.00015398166666666667,
+        "Compute": [
+            137.3828125,
+            0.55
+        ],
+        "Institution": "Nationwide Children's Hospital",
+        "Country": "USA"
+    },
+    {
+        "team": "MountainDigitalMedicine",
+        "AUC": 0.8322160080002963,
+        "AUPRC": 0.19717184594582005,
+        "Net Benefit": -0.01998262380538662,
+        "ECE": 0.08602886643788012,
+        "Inference Time": 0.00031602,
+        "Compute": [
+            173.54296875,
+            0.6200000000000001
+        ],
+        "Institution": "University of Colorado",
+        "Country": "USA"
+    },
+    {
+        "team": "InfectionDeflection",
+        "AUC": 0.7327771398940701,
+        "AUPRC": 0.24096624219145454,
+        "Net Benefit": -0.2797567332754127,
+        "ECE": 0.31218131849680275,
+        "Inference Time": 0.0001170275,
+        "Compute": [
+            143.03515625,
+            0.59
+        ],
+        "Institution": "University of Zurich, ETH Zurich",
+        "Country": "Switzerland"
+    },
+    {
+        "team": "ArcaneAI",
+        "AUC": 0.5685395755398348,
+        "AUPRC": 0.05191661881730052,
+        "Net Benefit": -0.2849695916594266,
+        "ECE": 0.3058767103842745,
+        "Inference Time": 0.00012085333333333332,
+        "Compute": [
+            129.40234375,
+            0.6799999999999999
+        ],
+        "Institution": "Carnegie Mellon University",
+        "Country": "USA"
+    },
+    {
+        "team": "Team99",
+        "AUC": 0.8370310011481906,
+        "AUPRC": 0.18365297327851948,
+        "Net Benefit": -0.006950477845351868,
+        "ECE": 0.1098539529973936,
+        "Inference Time": 8.036749999999999e-05,
+        "Compute": [
+            128.234375,
+            4.001447744
+        ],
+        "Institution": "University of British Columbia ",
+        "Country": "Canada"
+    },
+    {
+        "team": "YiquanLiu",
+        "AUC": 0.8079373310122598,
+        "AUPRC": 0.18747799223936765,
+        "Net Benefit": -0.0017376194613379675,
+        "ECE": 0.02960651229682016,
+        "Inference Time": 8.3435e-05,
+        "Compute": [
+            136.2421875,
+            0.5700000000000001
+        ],
+        "Institution": "nan",
+        "Country": "Canada"
+    },
+    {
+        "team": "DASSIE",
+        "AUC": 0.8241971924886107,
+        "AUPRC": 0.2532916981733108,
+        "Net Benefit": -0.008688097306689836,
+        "ECE": 0.07999613630755863,
+        "Inference Time": 9.51425e-05,
+        "Compute": [
+            129.60546875,
+            0.65
+        ],
+        "Institution": "Stellenbosch University",
+        "Country": "South Africa"
+    },
+    {
+        "team": "HELP",
+        "AUC": 0.8630134449424053,
+        "AUPRC": 0.31853780635082096,
+        "Net Benefit": 0.0017376194613379669,
+        "ECE": 0.012817834335360547,
+        "Inference Time": 0.00020967,
+        "Compute": [
+            170.6484375,
+            0.85
+        ],
+        "Institution": "Electronics and Telecommunications Research Intitute",
+        "Country": "South Korea"
+    },
+    {
+        "team": "DataAlchemistsIITM",
+        "AUC": 0.6758676247268418,
+        "AUPRC": 0.10635870779661984,
+        "Net Benefit": -0.02432667245873154,
+        "ECE": 0.05458365180564726,
+        "Inference Time": 6.193416666666667e-05,
+        "Compute": [
+            125.12109375,
+            0.49
+        ],
+        "Institution": "Indian Institute of Technology",
+        "Country": "India"
+    },
+    {
+        "team": "WestCoastRaccoonEnthusiasts",
+        "AUC": 0.3215489462572688,
+        "AUPRC": 0.028291013648106614,
+        "Net Benefit": -0.9148566463944396,
+        "ECE": 0.9570790799304952,
+        "Inference Time": 0.00010034416666666667,
+        "Compute": [
+            124.87890625,
+            0.47
+        ],
+        "Institution": "BC Children's Hospital Research Institute",
+        "Country": "Canada, USA"
+    },
+    {
+        "team": "GeniusMinds",
+        "AUC": 0.6741083003074189,
+        "AUPRC": 0.1333258490884462,
+        "Net Benefit": -0.9148566463944396,
+        "ECE": 0.5873894265855778,
+        "Inference Time": 0.00018863,
+        "Compute": [
+            130.59375,
+            5.711206784
+        ],
+        "Institution": "Institute of Business Administration ",
+        "Country": "Pakistan"
+    },
+    {
+        "team": "UCLPaediatrics",
+        "AUC": 0.8463461609689248,
+        "AUPRC": 0.2549142321101973,
+        "Net Benefit": -0.0781928757602085,
+        "ECE": 0.13992143408427457,
+        "Inference Time": 0.00012076333333333333,
+        "Compute": [
+            133.203125,
+            0.581352824
+        ],
+        "Institution": "University College London",
+        "Country": "UK"
+    }, {
+        "team": "WrightStateUniversity",
+        "AUC": 0.7912144894255343,
+        "AUPRC": 0.1872408206252751,
+        "Net Benefit": 0.000868809730668984,
+        "ECE": 0.011880720382276283,
+        "Inference Time": 0.005585231666666667,
+        "Compute": [
+            132.265625,
+            0.563019992
+        ],
+        "Institution": "Wright State University",
+        "Country": "USA"
+    },
+    {
+        "team": "UMNPED",
+        "AUC": 0.8526889884810548,
+        "AUPRC": 0.24876784763662377,
+        "Net Benefit": 0.0,
+        "ECE": 0.01224809720243267,
+        "Inference Time": 0.00029127916666666666,
+        "Compute": [
+            120.94140625,
+            3.5599999999999996
+        ],
+        "Institution": "University of Minnesota",
+        "Country": "USA"
+    },
+    {
+        "team": "AnCockrellLab",
+        "AUC": 0.8182340086669875,
+        "AUPRC": 0.28245045132935775,
+        "Net Benefit": -0.2988705473501303,
+        "ECE": 0.45389567072111203,
+        "Inference Time": 0.004601128333333333,
+        "Compute": [
+            123.89453125,
+            1.24
+        ],
+        "Institution": "The University of Vermont",
+        "Country": "USA"
+    }
+]
