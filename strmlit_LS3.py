@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import json
 import os
+import pydeck as pdk
 
 # ------------------------------
 # Set Page Configuration
@@ -15,16 +16,22 @@ st.set_page_config(
 )
 
 # ------------------------------
+# Sidebar: Navigation
+# ------------------------------
+page = st.sidebar.radio("Navigation", [ "Phase-1 Leaderboard Ranking", "Score Sensitivity Analysis"])
+#page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis"])
+
+# ------------------------------
 # Sidebar: Common Score Weights
 # ------------------------------
 st.sidebar.subheader("🔧 Score Weights")
 
 # Default (fixed) weights for each metric
 fixed_weights = {
-    'w_A': 0.25,   # Weight for AUC
-    'w_Ap': 0.35,  # Weight for AUPRC
-    'w_Nb': 0.30,  # Weight for Net Benefit
-    'w_ECE': 0.10, # Weight for ECE (Penalty)
+    'w_A': 0.30,   # Weight for AUC
+    'w_Ap': 0.40,  # Weight for AUPRC
+    'w_Nb': 0.35,  # Weight for Net Benefit
+    'w_ECE': 0.15, # Weight for ECE (Penalty)
     'w_I': 0.05,   # Weight for Inference Time (Penalty)
     'w_C': 0.05,   # Weight for Compute (Penalty)
 }
@@ -41,24 +48,31 @@ dynamic_weights = {
     'w_Ap': w_Ap,
     'w_Nb': w_Nb,
     'w_ECE': w_ECE,
-    'w_I': w_I,
+    'w_I': w_I ,
     'w_C': w_C,
 }
 
 
-
-# ------------------------------
-# Sidebar: Navigation
-# ------------------------------
-#page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis", "Leaderboard Ranking"])
-page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis"])
-
-
-if page == "Leaderboard Ranking":
+if page == "Phase-1 Leaderboard Ranking":
     # =============================================================================
     # Page 1: Leaderboard Ranking
     # =============================================================================
-    st.title("🏆 Leaderboard Ranking")
+    st.title("🏆 Phase-1 Leaderboard Ranking")
+
+    with st.expander("Formula Details"):
+        st.markdown("""
+    
+        **Leaderboard Score Formula:**
+        \[
+        Score = (w_A * A) + (w_Ap * Ap) + (w_Nb * Nb) - (w_ECE * ECE) - (w_I * I)
+        \]
+        - **A:** AUC  
+        - **Ap:** AUPRC  
+        - **Nb:** Net Benefit  
+        - **ECE:** Expected Calibration Error (Penalty)            
+        - **I:** Normalized Inference Time (Penalty)  
+        """)
+    
     json_file = "leaderboard_with_info.json"
 
     def compute_score_json(team_data, weights):
@@ -68,8 +82,32 @@ if page == "Leaderboard Ranking":
                (weights['w_Ap'] * team_data["AUPRC"]) + \
                (weights['w_Nb'] * team_data["Net Benefit"]) - \
                (weights['w_ECE'] * team_data["ECE"]) - \
-               (weights['w_I'] * team_data["Inference Time"]) - \
-               (weights['w_C'] * team_data["Compute"][1])
+               (weights['w_I'] * team_data["Norm_inf"]) #- \
+               #(weights['w_C'] * team_data["Compute"][1])
+
+     # Predefined mapping from country name to approximate lat/lon.
+    country_latlon = {
+        "Cameroon": {"lat": 7.3697, "lon": 12.3547},
+        "Canada": {"lat": 56.1304, "lon": -106.3468},
+        "China": {"lat": 35.8617, "lon": 104.1954},
+        "Germany": {"lat": 51.1657, "lon": 10.4515},
+        "India": {"lat": 20.5937, "lon": 78.9629},
+        "Kenya": {"lat": -0.0236, "lon": 37.9062},
+        "Pakistan": {"lat": 30.3753, "lon": 69.3451},
+        "Romania": {"lat": 45.9432, "lon": 24.9668},
+        "South Africa": {"lat": -30.5595, "lon": 22.9375},
+        "South Korea": {"lat": 35.9078, "lon": 127.7669},
+        "Switzerland": {"lat": 46.8182, "lon": 8.2275},
+        "Uganda": {"lat": 1.3733, "lon": 32.2903},
+        "UK": {"lat": 55.3781, "lon": -3.4360},
+        "USA": {"lat": 37.0902, "lon": -95.7129},
+    }
+    
+    def get_lat_lon(country_str):
+        # Assume country_str may contain multiple countries separated by commas; take the first.
+        country = country_str.split(",")[0].strip()
+        return country_latlon.get(country, {"lat": None, "lon": None})
+
     
     # Define a simple mapping of country names to flag emojis.
     flag_dict = {
@@ -107,6 +145,13 @@ if page == "Leaderboard Ranking":
         if not required_keys.issubset(df_leaderboard.columns):
             st.error("The JSON file must contain the keys: " + ", ".join(required_keys))
         else:
+            
+            # Compute the maximum inference time in the DataFrame
+            max_inf_time = df_leaderboard["Inference Time"].max()
+
+            # Compute the normalized inference time, ensuring no division by zero.
+            df_leaderboard["Norm_inf"] = df_leaderboard["Inference Time"].apply(lambda x: x / max_inf_time if max_inf_time else 0)
+            
             # Compute score for each team using dynamic weights.
             df_leaderboard["Score"] = df_leaderboard.apply(lambda row: compute_score_json(row, dynamic_weights), axis=1)
             
@@ -126,6 +171,10 @@ if page == "Leaderboard Ranking":
                                           df_leaderboard["Institution"].str.strip() + ",\n" + \
                                           df_leaderboard["Country_Flag"].str.strip() + ")"
             
+            # --- Create lat and lon columns using the first country in the "Country" field.
+            df_leaderboard["lat"] = df_leaderboard["Country"].apply(lambda x: get_lat_lon(x)["lat"])
+            df_leaderboard["lon"] = df_leaderboard["Country"].apply(lambda x: get_lat_lon(x)["lon"])
+            
             # Remove duplicate entries based on the team field.
             df_leaderboard = df_leaderboard.drop_duplicates(subset=["team"], keep="first")
             
@@ -135,7 +184,7 @@ if page == "Leaderboard Ranking":
             st.subheader("Full Leaderboard Ranking")
             
             # Define the internal display columns.
-            display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Inference Time", "Compute_1", "Compute_2"]
+            display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Norm_inf"] #, "Compute_1", "Compute_2"]
 
             # Mapping from your internal column names to the names you want to show.
             rename_dict = {
@@ -146,9 +195,9 @@ if page == "Leaderboard Ranking":
                 "AUPRC": "AUPRC",
                 "Net Benefit": "Net Benefit",
                 "ECE": "ECE",
-                "Inference Time": "Inference Time",
-                "Compute_1": "Memory Usage (MB)",
-                "Compute_2": "CPU time (s)"
+                "Norm_inf": "Normalized Inference Time"#,
+                #"Compute_1": "Memory Usage (MB)",
+                #"Compute_2": "CPU time (s)"
             }
 
             # Create a new DataFrame for display:
@@ -158,7 +207,7 @@ if page == "Leaderboard Ranking":
             #df_display.index = [''] * len(df_display)
 
             # Display the DataFrame with st.dataframe().
-            st.dataframe(df_display, hide_index=True)
+            st.dataframe(df_display, hide_index=True, use_container_width=True)
             
             # Reset index and style the DataFrame to hide the index and preserve newlines.
             #styled_df = df_leaderboard[display_cols].reset_index(drop=True).style.set_properties(
@@ -173,6 +222,64 @@ if page == "Leaderboard Ranking":
                 tooltip=display_cols
             ).properties(width=600, height=400)
             st.altair_chart(chart, use_container_width=True)
+            
+            # Instead of the bar chart, display a world map with team locations.
+            # Create a PyDeck Scatterplot layer.
+            # Now, group the DataFrame by "Country" so that one marker represents all teams in that country.
+            # The tooltip will list all teamInfo values and their scores.
+            # Group by country so that one marker represents all teams in that country.
+            # Round the Score values to 2 decimals.
+            df_leaderboard["Score"] = df_leaderboard["Score"].apply(lambda s: round(s, 2) if pd.notnull(s) else s)
+
+            # Group the DataFrame by Country so that one marker represents all teams in that country.
+            # For each country, we aggregate the team info and scores into one string.
+            grouped = df_leaderboard.groupby("Country").apply(
+                lambda x: pd.Series({
+                    "teams_scores": "<br/>".join(
+                        [f"{row['teamInfo']}: {round(row['Score'], 2)}" for _, row in x.iterrows()]
+                    ),
+                    "lat": x["lat"].iloc[0],
+                    "lon": x["lon"].iloc[0],
+                    "Country": x["Country"].iloc[0]
+                })
+            ).reset_index(drop=True)
+
+            # Create a PyDeck Scatterplot layer.
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=grouped,
+                get_position=["lon", "lat"],
+                get_fill_color="[0, 128, 200, 160]",
+                get_radius=200000,  # Adjust marker radius as needed.
+                pickable=True,
+            )
+
+            # Define an initial view that shows the world.
+            view_state = pdk.ViewState(
+                latitude=20,
+                longitude=0,
+                zoom=1,
+                pitch=0
+            )
+
+            # Define an HTML tooltip that shows the country and, side by side, the teams and their scores.
+            tooltip = {
+                "html": """
+                <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 12px;">
+                <div style="margin-right: 10px;"><b>Country:</b> {Country}</div>
+                <div style="margin-left: 10px;"><b>Teams & Scores:</b><br/>{teams_scores}</div>
+                </div>
+                """
+            }
+
+            # Create the Deck instance.
+            deck = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip=tooltip
+            )
+
+            st.pydeck_chart(deck)
             
     except FileNotFoundError:
         st.error(f"The file '{json_file}' was not found in the root directory. Please add the file and try again.")
@@ -213,7 +320,7 @@ elif page == "Score Sensitivity Analysis":
     I_val = st.sidebar.slider("Inference Time", 0.0, 1.0, 0.25, 0.01, key="ms_I_val")
     C_val = st.sidebar.slider("Compute", 0.0, 1.0, 0.25, 0.01, key="ms_C_val")
 
-    def compute_score(A, Ap, Nb, ECE, I, C, weights):
+    def compute_score_c(A, Ap, Nb, ECE, I, C, weights):
         return (weights['w_A'] * A) + \
                (weights['w_Ap'] * Ap) + \
                (weights['w_Nb'] * Nb) - \
@@ -221,7 +328,7 @@ elif page == "Score Sensitivity Analysis":
                (weights['w_I'] * I) - \
                (weights['w_C'] * C)
 
-    score_dynamic = compute_score(A=A_val, Ap=Ap_val, Nb=Nb_val, ECE=ECE_val, I=I_val, C=C_val, weights=dynamic_weights)
+    score_dynamic = compute_score_c(A=A_val, Ap=Ap_val, Nb=Nb_val, ECE=ECE_val, I=I_val, C=C_val, weights=dynamic_weights)
 
     st.markdown("## 🏅 Current Leaderboard Score (Dynamic Weights)")
     normalized_score = min(max(score_dynamic, 0.0), 1.0)
@@ -250,9 +357,9 @@ elif page == "Score Sensitivity Analysis":
         """
         return (fixed_weights['w_A'] * A) + \
             (fixed_weights['w_Ap'] * Ap) + \
-            (fixed_weights['w_Nb'] * Nb) + \
-            (fixed_weights['w_ECE'] * ECE) + \
-            (fixed_weights['w_I'] * I) + \
+            (fixed_weights['w_Nb'] * Nb) - \
+            (fixed_weights['w_ECE'] * ECE) - \
+            (fixed_weights['w_I'] * I) - \
             (fixed_weights['w_C'] * C)
 
     # ------------------------------
@@ -264,9 +371,9 @@ elif page == "Score Sensitivity Analysis":
         """
         return (weights['w_A'] * A) + \
             (weights['w_Ap'] * Ap) + \
-            (weights['w_Nb'] * Nb) + \
-            (weights['w_ECE'] * ECE) + \
-            (weights['w_I'] * I) + \
+            (weights['w_Nb'] * Nb) - \
+            (weights['w_ECE'] * ECE) - \
+            (weights['w_I'] * I) - \
             (weights['w_C'] * C)
 
 
@@ -355,9 +462,9 @@ elif page == "Score Sensitivity Analysis":
         """
         return (weights['w_A'] * A) + \
             (weights['w_Ap'] * Ap) + \
-            (weights['w_Nb'] * Nb) + \
-            (weights['w_ECE'] * ECE) + \
-            (weights['w_I'] * I) + \
+            (weights['w_Nb'] * Nb) - \
+            (weights['w_ECE'] * ECE) - \
+            (weights['w_I'] * I) - \
             (weights['w_C'] * C)
 
 
