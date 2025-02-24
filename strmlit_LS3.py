@@ -190,11 +190,12 @@ if page == "Phase-1 Leaderboard Ranking":
             
             # Define the internal display columns.
             display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Norm_inf"] #, "Compute_1", "Compute_2"]
+            #display_cols = ["Rank", "team", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Norm_inf"] #, "Compute_1", "Compute_2"]
 
             # Mapping from your internal column names to the names you want to show.
             rename_dict = {
                 "team": "Team Name",
-                "Country_Flag": "Country",
+                "Country_Flag": "Location",
                 "Score": "Score",
                 "AUC": "AUC",
                 "AUPRC": "AUPRC",
@@ -285,6 +286,7 @@ if page == "Phase-1 Leaderboard Ranking":
                 tooltip=tooltip
             )
 
+            st.subheader("Teams on the world map")
             st.pydeck_chart(deck)
             
     except FileNotFoundError:
