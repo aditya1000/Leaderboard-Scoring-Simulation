@@ -272,7 +272,7 @@ if page == "Phase-1 Leaderboard Ranking":
             tooltip = {
                 "html": """
                 <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 12px;">
-                <div style="margin-right: 10px;"><b>Country:</b> {Country}</div>
+                <div style="margin-right: 10px;"> {primaryCountry}</div>
                 <div style="margin-left: 10px;"><b>Teams & Scores:</b><br/>{teams_scores}</div>
                 </div>
                 """
