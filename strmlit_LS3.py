@@ -221,13 +221,7 @@ if page == "Phase-1 Leaderboard Ranking":
             #).hide(axis="index")
             #st.write(styled_df.to_html(), unsafe_allow_html=True)
             
-            # Create a bar chart showing team scores using teamInfo as the label.
-            chart = alt.Chart(df_leaderboard).mark_bar().encode(
-                x=alt.X("Score:Q", title="Score"),
-                y=alt.Y("team:N", sort="-x", title="Team"),
-                tooltip=display_cols
-            ).properties(width=600, height=400)
-            st.altair_chart(chart, use_container_width=True)
+            
             
             # Instead of the bar chart, display a world map with team locations.
             # Create a PyDeck Scatterplot layer.
@@ -288,6 +282,14 @@ if page == "Phase-1 Leaderboard Ranking":
 
             st.subheader("Teams on the world map")
             st.pydeck_chart(deck)
+
+            #Create a bar chart showing team scores using teamInfo as the label.
+            chart = alt.Chart(df_leaderboard).mark_bar().encode(
+                x=alt.X("Score:Q", title="Score"),
+                y=alt.Y("team:N", sort="-x", title="Team"),
+                tooltip=display_cols
+            ).properties(width=600, height=400)
+            st.altair_chart(chart, use_container_width=True)
             
     except FileNotFoundError:
         st.error(f"The file '{json_file}' was not found in the root directory. Please add the file and try again.")
