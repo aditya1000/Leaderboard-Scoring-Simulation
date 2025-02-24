@@ -171,6 +171,11 @@ if page == "Phase-1 Leaderboard Ranking":
                                           df_leaderboard["Institution"].str.strip() + ",\n" + \
                                           df_leaderboard["Country_Flag"].str.strip() + ")"
             
+            # Create a new column "primaryCountry" that takes only the first country from the "Country" field.
+            df_leaderboard["primaryCountry"] = df_leaderboard["Country"].apply(lambda x: x.split(",")[0].strip())
+
+
+            
             # --- Create lat and lon columns using the first country in the "Country" field.
             df_leaderboard["lat"] = df_leaderboard["Country"].apply(lambda x: get_lat_lon(x)["lat"])
             df_leaderboard["lon"] = df_leaderboard["Country"].apply(lambda x: get_lat_lon(x)["lon"])
@@ -233,14 +238,15 @@ if page == "Phase-1 Leaderboard Ranking":
 
             # Group the DataFrame by Country so that one marker represents all teams in that country.
             # For each country, we aggregate the team info and scores into one string.
-            grouped = df_leaderboard.groupby("Country").apply(
+            # Group by the "primaryCountry" so that one marker represents all teams from that country.
+            grouped = df_leaderboard.groupby("primaryCountry").apply(
                 lambda x: pd.Series({
                     "teams_scores": "<br/>".join(
                         [f"{row['teamInfo']}: {round(row['Score'], 2)}" for _, row in x.iterrows()]
                     ),
                     "lat": x["lat"].iloc[0],
                     "lon": x["lon"].iloc[0],
-                    "Country": x["Country"].iloc[0]
+                    "primaryCountry": x["primaryCountry"].iloc[0]
                 })
             ).reset_index(drop=True)
 
