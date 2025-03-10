@@ -28,10 +28,10 @@ st.sidebar.subheader("🔧 Score Weights")
 
 # Default (fixed) weights for each metric
 fixed_weights = {
-    'w_A': 0.30,   # Weight for AUC
-    'w_Ap': 0.40,  # Weight for AUPRC
-    'w_Nb': 0.35,  # Weight for Net Benefit
-    'w_ECE': 0.15, # Weight for ECE (Penalty)
+    'w_A': 0.626,   # Weight for AUC
+    'w_Ap': 0.417,  # Weight for AUPRC
+    'w_Nb': 0.974,  # Weight for Net Benefit
+    'w_ECE': 0.907, # Weight for ECE (Penalty)
     'w_I': 0.05,   # Weight for Inference Time (Penalty)
     'w_C': 0.05,   # Weight for Compute (Penalty)
 }

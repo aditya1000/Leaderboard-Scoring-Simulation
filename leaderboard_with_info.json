@@ -403,5 +403,25 @@
         ],
         "Institution": "The University of Vermont",
         "Country": "USA"
-    }
+    },
+    {"team": "NOVACHOP",
+    "AUC": 0.8422348975887995, 
+    "AUPRC": 0.3127440980953187, 
+    "Net Benefit": -0.20851433536055602, 
+    "ECE": 0.3398599965247611, 
+    "Inference Time": 3.8965000000000004e-05, 
+    "Compute": [116.19140625, 0.5],
+      "Institution": "Villanova University",
+        "Country": "USA"
+    },
+    {"team": "Eastern University",
+    "AUC": 0.8654950183340124, 
+    "AUPRC": 0.30897269871382765, 
+    "Net Benefit": 0.0008688097306689834, 
+    "ECE": 0.014261511728931362, 
+    "Inference Time": 0.0013704858333333332, 
+    "Compute": [126.05078125, 0.66],
+    "Institution": "Eastern University",
+    "Country": "USA, Canada"
+    } 
 ]
