@@ -18,46 +18,48 @@ st.set_page_config(
 # ------------------------------
 # Sidebar: Navigation
 # ------------------------------
-page = st.sidebar.radio("Navigation", [ "Phase-1 Leaderboard Ranking", "Score Sensitivity Analysis"])
+option = st.sidebar.radio("Navigation", ["Final Phase Leaderboard" ,"Phase-1 Leaderboard Ranking"]) #,"Score Sensitivity Analysis"])
 #page = st.sidebar.radio("Navigation", ["Score Sensitivity Analysis"])
 
-# ------------------------------
-# Sidebar: Common Score Weights
-# ------------------------------
-st.sidebar.subheader("🔧 Score Weights")
-
-# Default (fixed) weights for each metric
-fixed_weights = {
-    'w_A': 0.626,   # Weight for AUC
-    'w_Ap': 0.417,  # Weight for AUPRC
-    'w_Nb': 0.974,  # Weight for Net Benefit
-    'w_ECE': 0.907, # Weight for ECE (Penalty)
-    'w_I': 0.05,   # Weight for Inference Time (Penalty)
-    'w_C': 0.05,   # Weight for Compute (Penalty)
-}
-
-w_A = st.sidebar.slider("w_A (Weight for AUC)", 0.0, 1.0, fixed_weights['w_A'], 0.01, key="w_A")
-w_Ap = st.sidebar.slider("w_Ap (Weight for AUPRC)", 0.0, 1.0, fixed_weights['w_Ap'], 0.01, key="w_Ap")
-w_Nb = st.sidebar.slider("w_Nb (Weight for Net Benefit)", 0.0, 1.0, fixed_weights['w_Nb'], 0.01, key="w_Nb")
-w_ECE = st.sidebar.slider("w_ECE (Weight for ECE - Penalty)", 0.0, 0.2, fixed_weights['w_ECE'], 0.01, key="w_ECE")
-w_I = st.sidebar.slider("w_I (Weight for Inference Time - Penalty)", 0.0, 0.2, fixed_weights['w_I'], 0.01, key="w_I")
-w_C = st.sidebar.slider("w_C (Weight for Compute - Penalty)", 0.0, 0.2, fixed_weights['w_C'], 0.01, key="w_C")
-
-dynamic_weights = {
-    'w_A': w_A,
-    'w_Ap': w_Ap,
-    'w_Nb': w_Nb,
-    'w_ECE': w_ECE,
-    'w_I': w_I ,
-    'w_C': w_C,
-}
 
 
-if page == "Phase-1 Leaderboard Ranking":
+if option == "Phase-1 Leaderboard Ranking":
     # =============================================================================
     # Page 1: Leaderboard Ranking
     # =============================================================================
     st.title("🏆 Phase-1 Leaderboard Ranking")
+
+    # ------------------------------
+    # Sidebar: Common Score Weights
+    # ------------------------------
+    st.sidebar.subheader("🔧 Score Weights")
+
+    # Default (fixed) weights for each metric
+    fixed_weights = {
+        'w_A': 0.626,   # Weight for AUC
+        'w_Ap': 0.417,  # Weight for AUPRC
+        'w_Nb': 0.974,  # Weight for Net Benefit
+        'w_ECE': 0.907, # Weight for ECE (Penalty)
+        'w_I': 0.05,   # Weight for Inference Time (Penalty)
+        'w_C': 0.05,   # Weight for Compute (Penalty)
+    }
+
+    w_A = st.sidebar.slider("w_A (Weight for AUC)", 0.0, 1.0, fixed_weights['w_A'], 0.01, key="w_A")
+    w_Ap = st.sidebar.slider("w_Ap (Weight for AUPRC)", 0.0, 1.0, fixed_weights['w_Ap'], 0.01, key="w_Ap")
+    w_Nb = st.sidebar.slider("w_Nb (Weight for Net Benefit)", 0.0, 1.0, fixed_weights['w_Nb'], 0.01, key="w_Nb")
+    w_ECE = st.sidebar.slider("w_ECE (Weight for ECE - Penalty)", 0.0, 0.2, fixed_weights['w_ECE'], 0.01, key="w_ECE")
+    w_I = st.sidebar.slider("w_I (Weight for Inference Time - Penalty)", 0.0, 0.2, fixed_weights['w_I'], 0.01, key="w_I")
+    w_C = st.sidebar.slider("w_C (Weight for Compute - Penalty)", 0.0, 0.2, fixed_weights['w_C'], 0.01, key="w_C")
+
+    dynamic_weights = {
+        'w_A': w_A,
+        'w_Ap': w_Ap,
+        'w_Nb': w_Nb,
+        'w_ECE': w_ECE,
+        'w_I': w_I ,
+        'w_C': w_C,
+    }
+
 
     with st.expander("Formula Details"):
         st.markdown("""
@@ -296,8 +298,89 @@ if page == "Phase-1 Leaderboard Ranking":
     except Exception as e:
         st.error(f"An error occurred while reading the JSON file: {e}")
         
-    
-elif page == "Score Sensitivity Analysis":
+elif option == "Final Phase Leaderboard":
+    st.title("🏁 Final Phase Leaderboard")
+    st.markdown("### Team name")
+    st.markdown("*Please ensure this is the same team name that you registered with!*")
+
+    import pandas as pd
+    import json
+
+    # Load fixed factor loadings
+    with open("factor_loadings.json", "r") as f:
+        factor_loadings = json.load(f)
+
+    # Load scale parameters
+    with open("scale_params.json", "r") as f:
+        scale_params = json.load(f)
+
+    # Load z-score parameters
+    with open("zscore_params.json", "r") as f:
+        zscore_params = json.load(f)
+
+    # Display in sidebar
+    st.sidebar.markdown("### ⚙️ Scaling Parameters")
+
+    st.sidebar.markdown("**Fixed Factor Loadings:**")
+    st.sidebar.json(factor_loadings)
+
+    st.sidebar.markdown("**Min-Max Scaling Parameters:**")
+    st.sidebar.markdown(f"**Center:** `{scale_params['center']}`")
+    st.sidebar.markdown(f"**Scale:** `{scale_params['scale']}`")
+
+    st.sidebar.markdown("**Z-Score Scaling Parameters:**")
+    st.sidebar.markdown(f"**Center:** `{zscore_params['center']}`")
+    st.sidebar.markdown(f"**Scale:** `{zscore_params['scale']}`")
+
+    # Load and parse evaluation CSV
+    file_path = "Eva_csv - Sheet1.csv"  # Update with actual path if needed
+    df_eval = pd.read_csv(file_path)
+
+    # Clean column name
+    df_eval.rename(columns={
+        df_eval.columns[0]: "Team name"
+    }, inplace=True)
+
+    # Extract metrics from JSON in Evaluated_1
+    def extract_metrics(score_json):
+        try:
+            data = json.loads(score_json)
+            score = data.get("score", {})
+            return {
+                "Weighted Score": score.get("weighted_score"),
+                "Scaled Weighted Score": score.get("scaled_weighted_score"),
+                "AUPRC": score.get("AUPRC"),
+                "Net Benefit": score.get("Net Benefit"),
+                "ECE": score.get("ECE"),
+                "F1": score.get("F1"),
+                "Sensitivity": score.get("Sensitivity"),
+                "Specificity": score.get("Specificity"),
+                "Parsimony Score": score.get("Parsimony Score"),
+                "Inference Time": score.get("Inference Time"),
+                "Threshold Used": score.get("threshold_used"),
+                "TP": score.get("tp"),
+                "FP": score.get("fp"),
+                "FN": score.get("fn"),
+                "TN": score.get("tn"),
+                "AUC": score.get("AUC")       
+            }
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    # Parse and construct leaderboard
+    metrics_df = df_eval["Evaluated_1"].apply(extract_metrics).apply(pd.Series)
+    leaderboard_df = pd.concat([df_eval["Team name"], metrics_df], axis=1)
+
+    # Round all numeric columns except 'Threshold Used'
+    cols_to_round = leaderboard_df.select_dtypes(include='number').columns.difference(['Threshold Used'])
+    leaderboard_df[cols_to_round] = leaderboard_df[cols_to_round].round(2)
+
+
+    # Show leaderboard
+    st.dataframe(leaderboard_df, use_container_width=True)
+
+
+elif option == "Score Sensitivity Analysis":
 # =============================================================================
 # Page 2: Score Sensitivity Analysis
 # =============================================================================
