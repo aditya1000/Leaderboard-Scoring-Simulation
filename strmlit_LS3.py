@@ -300,9 +300,7 @@ if option == "Phase-1 Leaderboard Ranking":
         
 elif option == "Final Phase Leaderboard":
     st.title("🏁 Final Phase Leaderboard")
-    st.markdown("### Team name")
-    st.markdown("*Please ensure this is the same team name that you registered with!*")
-
+    
     import pandas as pd
     import json
 
