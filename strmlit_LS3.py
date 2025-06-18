@@ -370,7 +370,7 @@ elif option == "Final Phase Leaderboard":
     leaderboard_df = pd.concat([df_eval["Team name"], metrics_df], axis=1)
 
     # Round all numeric columns except 'Threshold Used'
-    cols_to_round = leaderboard_df.select_dtypes(include='number').columns.difference(['Threshold Used'])
+    cols_to_round = leaderboard_df.select_dtypes(include='number').columns.difference(['Threshold Used', 'Inference Time'])
     leaderboard_df[cols_to_round] = leaderboard_df[cols_to_round].round(2)
 
 
