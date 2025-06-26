@@ -300,7 +300,7 @@ if option == "Phase-1 Leaderboard Ranking":
         
 elif option == "Final Phase Leaderboard":
     st.title("🏁 Final Phase Leaderboard")
-    
+
     import pandas as pd
     import json
 
@@ -318,40 +318,36 @@ elif option == "Final Phase Leaderboard":
 
     # Display in sidebar
     st.sidebar.markdown("### ⚙️ Scaling Parameters")
-
     st.sidebar.markdown("**Fixed Factor Loadings:**")
     st.sidebar.json(factor_loadings)
-
     st.sidebar.markdown("**Min-Max Scaling Parameters:**")
     st.sidebar.markdown(f"**Center:** `{scale_params['center']}`")
     st.sidebar.markdown(f"**Scale:** `{scale_params['scale']}`")
-
     st.sidebar.markdown("**Z-Score Scaling Parameters:**")
     st.sidebar.markdown(f"**Center:** `{zscore_params['center']}`")
     st.sidebar.markdown(f"**Scale:** `{zscore_params['scale']}`")
 
-    # Load and parse evaluation CSV
-    file_path = "Eva_csv - Sheet1.csv"  # Update with actual path if needed
-    df_eval = pd.read_csv(file_path)
+    # Load evaluation CSV
+    file_path = "Eva_csv - Sheet1.csv"
+    df = pd.read_csv(file_path)
+    df.columns = df.columns.str.strip()
+    df.rename(columns={df.columns[1]: "Team name"}, inplace=True)
 
-    # Clean column name
-    df_eval.rename(columns={
-        df_eval.columns[0]: "Team name"
-    }, inplace=True)
-
-    # Extract metrics from JSON in Evaluated_1
+    # Function to extract metrics and flag status
     def extract_metrics(score_json):
         try:
             data = json.loads(score_json)
             score = data.get("score", {})
+            sensitivity = score.get("Sensitivity", None)
             return {
+                "Status": "Complete" if (sensitivity is not None and sensitivity >= 0.80) else "Low Sensitivity",
                 "Weighted Score": score.get("weighted_score"),
                 "Scaled Weighted Score": score.get("scaled_weighted_score"),
                 "AUPRC": score.get("AUPRC"),
                 "Net Benefit": score.get("Net Benefit"),
                 "ECE": score.get("ECE"),
                 "F1": score.get("F1"),
-                "Sensitivity": score.get("Sensitivity"),
+                "Sensitivity": sensitivity,
                 "Specificity": score.get("Specificity"),
                 "Parsimony Score": score.get("Parsimony Score"),
                 "Inference Time": score.get("Inference Time"),
@@ -360,22 +356,37 @@ elif option == "Final Phase Leaderboard":
                 "FP": score.get("fp"),
                 "FN": score.get("fn"),
                 "TN": score.get("tn"),
-                "AUC": score.get("AUC")       
+                "AUC": score.get("AUC")     
             }
-        except (json.JSONDecodeError, TypeError):
-            return {}
+        except:
+            return {"Status": "Error"}
 
-    # Parse and construct leaderboard
-    metrics_df = df_eval["Evaluated_1"].apply(extract_metrics).apply(pd.Series)
-    leaderboard_df = pd.concat([df_eval["Team name"], metrics_df], axis=1)
+    # Parse and construct full DataFrame
+    metrics_df = df["Evaluated_1"].apply(extract_metrics).apply(pd.Series)
+    full_df = pd.concat([df.drop(columns=["Evaluated_1"]), metrics_df], axis=1)
 
-    # Round all numeric columns except 'Threshold Used'
-    cols_to_round = leaderboard_df.select_dtypes(include='number').columns.difference(['Threshold Used', 'Inference Time'])
-    leaderboard_df[cols_to_round] = leaderboard_df[cols_to_round].round(2)
+    # Drop unnamed, affiliation, and country columns
+    full_df = full_df.loc[:, ~full_df.columns.str.contains('^Unnamed')]
+    full_df = full_df.drop(columns=["Affiliation", "Country"], errors="ignore").reset_index(drop=True)
 
+    # Drop rows with missing team names
+    full_df = full_df[full_df["Team name"].notna() & (full_df["Team name"].str.strip() != "")]
 
-    # Show leaderboard
-    st.dataframe(leaderboard_df, use_container_width=True)
+    # Round all except Threshold Used and Inference Time
+    cols_to_round = full_df.select_dtypes(include='number').columns.difference(['Threshold Used', 'Inference Time'])
+    full_df[cols_to_round] = full_df[cols_to_round].round(2)
+
+    # Split into complete and flagged groups
+    complete_df = full_df[full_df["Status"] == "Complete"]
+    flagged_df = full_df[full_df["Status"] != "Complete"]
+
+    # Display both sections
+    st.subheader("✅ Complete Submissions")
+    st.dataframe(complete_df, use_container_width=True)
+
+    st.subheader("⚠️ Flagged or Error Submissions")
+    st.dataframe(flagged_df, use_container_width=True)
+
 
 
 elif option == "Score Sensitivity Analysis":
