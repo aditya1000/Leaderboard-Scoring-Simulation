@@ -2,5 +2,7 @@
   "F1": 0.6477,
   "AUPRC": 0.3447,
   "Net.Benefit": 0.8514,
-  "ECE": -0.8675
+  "ECE": -0.8675,
+  "inference speed": 0.05, 
+  "parsimony": 0.05
 }
