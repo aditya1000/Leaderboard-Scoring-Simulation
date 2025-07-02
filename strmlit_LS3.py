@@ -384,15 +384,18 @@ elif option == "Final Phase Leaderboard":
     low_sens_df = parsed_df[parsed_df["Status"].isin(["Low Sensitivity", "Sensitivity < 0.8"])]
     error_df = parsed_df[parsed_df["Status"] == "Error"]
 
-    # Display sections
     st.subheader("✅ Complete Submissions")
-    st.dataframe(complete_df, use_container_width=True)
+    st.dataframe(complete_df.sort_values(by="Scaled Weighted Score", ascending=False),
+                use_container_width=True, hide_index=True)
 
     st.subheader("⚠️ Submissions with Low Sensitivity or Sensitivity < 0.8")
-    st.dataframe(low_sens_df, use_container_width=True)
+    st.dataframe(low_sens_df.sort_values(by="Scaled Weighted Score", ascending=False),
+                use_container_width=True, hide_index=True)
 
     st.subheader("❌ Submissions with Errors (Flag/Error)")
-    st.dataframe(error_df, use_container_width=True)
+    st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
+                use_container_width=True, hide_index=True)
+
 
 elif option == "Score Sensitivity Analysis":
 # =============================================================================
