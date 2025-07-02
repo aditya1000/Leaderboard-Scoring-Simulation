@@ -313,6 +313,11 @@ elif option == "Final Phase Leaderboard":
         zscore_params = json.load(f)
 
     # Sidebar display
+
+     # One-liner note
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("ℹ️ **Leaderboard weighted scoring only include models with Sensitivity ≥ 0.8.**")
+
     st.sidebar.markdown("### ⚙️ Scaling Parameters")
     st.sidebar.markdown("**Fixed Factor Loadings:**")
     st.sidebar.json(factor_loadings)
@@ -323,6 +328,7 @@ elif option == "Final Phase Leaderboard":
     st.sidebar.markdown(f"**Center:** `{zscore_params['center']}`")
     st.sidebar.markdown(f"**Scale:** `{zscore_params['scale']}`")
 
+   
     # Load and clean CSV
     file_path = "Eva_csv - Sheet1.csv"
     df = pd.read_csv(file_path)
