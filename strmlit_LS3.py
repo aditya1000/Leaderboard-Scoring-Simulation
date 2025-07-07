@@ -303,6 +303,7 @@ elif option == "Final Phase Leaderboard":
 
     import pandas as pd
     import json
+    import pycountry
 
     # Load parameter files
     with open("factor_loadings.json", "r") as f:
@@ -335,6 +336,29 @@ elif option == "Final Phase Leaderboard":
     df.columns = df.columns.str.strip()
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
     df.rename(columns={"Team name": "Team name"}, inplace=True)
+
+    # Convert countries to flags
+    def country_to_flag(country_field):
+        if pd.isna(country_field):
+            return ""
+        countries = [c.strip() for c in str(country_field).split(",")]
+        flags = []
+        for country_name in countries:
+            try:
+                match = pycountry.countries.search_fuzzy(country_name)[0]
+                flag = ''.join(chr(ord(c) - ord('A') + 0x1F1E6) for c in match.alpha_2)
+                flags.append(flag)
+            except:
+                continue
+        return ' '.join(flags)
+    
+    df["Flag"] = df["Country"].apply(country_to_flag)
+    df["TeamDisplay"] = df.apply(
+        lambda row: f"{row['Team name']} {row['Flag']}" if pd.notna(row['Team name']) else "",
+        axis=1
+    )
+    team_flag_map = df.set_index("Team name")["TeamDisplay"].dropna().to_dict()
+
 
     # Extraction function with sensitivity/error flagging
     def extract_metrics(row):
@@ -381,6 +405,8 @@ elif option == "Final Phase Leaderboard":
     # Remove missing team names
     parsed_df = parsed_df[parsed_df["Team name"].notna() & (parsed_df["Team name"].str.strip() != "")]
 
+    #parsed_df["TeamDisplay"] = parsed_df["Team name"].map(team_flag_map)
+    parsed_df["Team name"] = parsed_df["Team name"].map(team_flag_map)
     # Round numeric columns
     num_cols = parsed_df.select_dtypes(include="number").columns.difference(["Threshold Used", "Inference Time"])
     parsed_df[num_cols] = parsed_df[num_cols].round(2)
