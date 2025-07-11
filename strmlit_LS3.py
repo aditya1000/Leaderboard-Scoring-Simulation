@@ -416,17 +416,47 @@ elif option == "Final Phase Leaderboard":
     low_sens_df = parsed_df[parsed_df["Status"].isin(["Low Sensitivity", "Sensitivity < 0.8"])]
     error_df = parsed_df[parsed_df["Status"] == "Error"]
 
+    # Display Complete Submissions prominently with more height
+    # Sort complete submissions and add Rank column
+    complete_sorted = complete_df.sort_values(by="Scaled Weighted Score", ascending=False).reset_index(drop=True)
+    complete_sorted.insert(0, "Rank", complete_sorted.index + 1)
+
+    # Move 'Status' and 'Submission time' to the end
+    # Desired insertion after F1
+    cols = list(complete_sorted.columns)
+
+    # Start with default order, then rearrange
+    front = ["Rank", "Team name", "Weighted Score", "Scaled Weighted Score", "AUPRC", "Net Benefit", "ECE", "F1"]
+    after_f1 = ["TP", "FP", "FN", "TN"]
+    rest = [c for c in cols if c not in (front + after_f1 + ["Status", "Submission time"])]
+    final_order = front + after_f1 + rest + ["Status", "Submission time"]
+
+    complete_sorted = complete_sorted[final_order]
+
+    # Display Complete Submissions
     st.subheader("✅ Complete Submissions")
-    st.dataframe(complete_df.sort_values(by="Scaled Weighted Score", ascending=False),
-                use_container_width=True, hide_index=True)
+    st.dataframe(
+        complete_sorted,
+        use_container_width=True,
+        hide_index=True,
+        height=600
+    )
 
-    st.subheader("⚠️ Submissions with Low Sensitivity or Sensitivity < 0.8")
-    st.dataframe(low_sens_df.sort_values(by="Scaled Weighted Score", ascending=False),
-                use_container_width=True, hide_index=True)
+    # Wrap flagged submissions inside an expandable section
+    with st.expander("⚠️ Click to view Flagged / Low Sensitivity / Error Submissions"):
+        st.dataframe(
+            pd.concat([low_sens_df, error_df])
+            .sort_values(by="Scaled Weighted Score", ascending=False)
+            [["Team name"] + [col for col in error_df.columns if col != "Team name"]],
+            use_container_width=True,
+            hide_index=True
+        )
 
-    st.subheader("❌ Submissions with Errors (Flag/Error)")
-    st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
-                use_container_width=True, hide_index=True)
+    #st.subheader("❌ Submissions with Errors (Flag/Error)")
+    #st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
+    #            use_container_width=True, hide_index=True)
+    
+    
 
 
 elif option == "Score Sensitivity Analysis":
