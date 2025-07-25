@@ -303,7 +303,39 @@ elif option == "Final Phase Leaderboard":
 
     import pandas as pd
     import json
-    import pycountry
+    import pydeck as pdk
+    import altair as alt
+
+    # Predefined lat/lon and flag dictionaries
+    country_latlon = {
+        "Cameroon": {"lat": 7.3697, "lon": 12.3547},
+        "Canada": {"lat": 56.1304, "lon": -106.3468},
+        "China": {"lat": 35.8617, "lon": 104.1954},
+        "Germany": {"lat": 51.1657, "lon": 10.4515},
+        "India": {"lat": 20.5937, "lon": 78.9629},
+        "Kenya": {"lat": -0.0236, "lon": 37.9062},
+        "Pakistan": {"lat": 30.3753, "lon": 69.3451},
+        "Romania": {"lat": 45.9432, "lon": 24.9668},
+        "South Africa": {"lat": -30.5595, "lon": 22.9375},
+        "South Korea": {"lat": 35.9078, "lon": 127.7669},
+        "Switzerland": {"lat": 46.8182, "lon": 8.2275},
+        "Uganda": {"lat": 1.3733, "lon": 32.2903},
+        "United Kingdom": {"lat": 55.3781, "lon": -3.4360},
+        "USA": {"lat": 37.0902, "lon": -95.7129},
+    }
+    flag_dict = {
+        "Cameroon": "🇨🇲", "Canada": "🇨🇦", "China": "🇨🇳", "Germany": "🇩🇪",
+        "India": "🇮🇳", "Kenya": "🇰🇪", "Pakistan": "🇵🇰", "Romania": "🇷🇴",
+        "South Africa": "🇿🇦", "South Korea": "🇰🇷", "Switzerland": "🇨🇭",
+        "Uganda": "🇺🇬", "United Kingdom": "🇬🇧", "USA": "🇺🇸"
+    }
+
+    # Manual geo lookup
+    def get_lat_lon_manual(country_field):
+        if pd.isna(country_field):
+            return {"lat": None, "lon": None}
+        country = str(country_field).split(",")[0].strip()
+        return country_latlon.get(country, {"lat": None, "lon": None})
 
     # Load parameter files
     with open("factor_loadings.json", "r") as f:
@@ -313,12 +345,9 @@ elif option == "Final Phase Leaderboard":
     with open("zscore_params.json", "r") as f:
         zscore_params = json.load(f)
 
-    # Sidebar display
-
-     # One-liner note
+    # Sidebar
     st.sidebar.markdown("---")
-    st.sidebar.markdown("ℹ️ **Leaderboard weighted scoring only include models with Sensitivity ≥ 0.8.**")
-
+    st.sidebar.markdown("ℹ️ **Leaderboard weighted scoring only includes models with Sensitivity ≥ 0.8. Submissions after the 19th are marked Late.**")
     st.sidebar.markdown("### ⚙️ Scaling Parameters")
     st.sidebar.markdown("**Fixed Factor Loadings:**")
     st.sidebar.json(factor_loadings)
@@ -329,128 +358,130 @@ elif option == "Final Phase Leaderboard":
     st.sidebar.markdown(f"**Center:** `{zscore_params['center']}`")
     st.sidebar.markdown(f"**Scale:** `{zscore_params['scale']}`")
 
-   
     # Load and clean CSV
-    file_path = "Eva_csv - Sheet1.csv"
-    df = pd.read_csv(file_path)
+    df = pd.read_csv("Eva_csv - Sheet1.csv")
     df.columns = df.columns.str.strip()
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
-    df.rename(columns={"Team name": "Team name"}, inplace=True)
 
-    # Convert countries to flags
-    def country_to_flag(country_field):
-        if pd.isna(country_field):
-            return ""
-        countries = [c.strip() for c in str(country_field).split(",")]
-        flags = []
-        for country_name in countries:
-            try:
-                match = pycountry.countries.search_fuzzy(country_name)[0]
-                flag = ''.join(chr(ord(c) - ord('A') + 0x1F1E6) for c in match.alpha_2)
-                flags.append(flag)
-            except:
-                continue
-        return ' '.join(flags)
-    
-    df["Flag"] = df["Country"].apply(country_to_flag)
-    df["TeamDisplay"] = df.apply(
-        lambda row: f"{row['Team name']} {row['Flag']}" if pd.notna(row['Team name']) else "",
-        axis=1
-    )
-    team_flag_map = df.set_index("Team name")["TeamDisplay"].dropna().to_dict()
+    # Normalize country names
+    country_norm = {
+        "UK": "United Kingdom", "United Kingdom": "United Kingdom",
+        "US": "USA", "USA": "USA", "United States": "USA",
+        "United States of America": "USA",
+        "South Korea": "South Korea", "Republic of Korea": "South Korea",
+        "Cameroon": "Cameroon", "Canada": "Canada",
+        "Kenya": "Kenya", "Pakistan": "Pakistan",
+        "Switzerland": "Switzerland", "India": "India"
+    }
+    df['Country_clean'] = df['Country'].map(country_norm).fillna(df['Country'])
 
-
-    # Extraction function with sensitivity/error flagging
+    # Build flag and display name
+    def country_to_flag_manual(c):
+        parts = str(c).split(",")
+        return " ".join(flag_dict.get(country_norm.get(p.strip(), p.strip()), "") for p in parts)
+    df['Flag'] = df['Country_clean'].apply(country_to_flag_manual)
+    df['TeamDisplay'] = df.apply(lambda r: f"{r['Team name']} {r['Flag']}".strip(), axis=1)
+    team_flag_map = df.set_index('Team name')['TeamDisplay'].to_dict()
+        # Extraction function with sensitivity/error/late flagging
     def extract_metrics(row):
-        raw = row["Evaluated_1"]
-        pre_flag = str(row.get("Flag", "")).strip()
+        # Parse submission date
+        try:
+            sub_dt = pd.to_datetime(row['Submission time'], format='%m/%d/%y %H:%M')
+        except:
+            sub_dt = None
+        is_late = sub_dt is not None and sub_dt > pd.Timestamp("2025-07-19")
+        raw = row['Evaluated_1']
+        is_error = str(row.get('Flag','')).strip().lower() == 'error'
 
-        if pre_flag.lower() == "error":
-            return {"Status": "Error", "Submission time": row.get("Submission time"), "Team name": row.get("Team name")}
+        # Handle explicit low-sensitivity message
+        if isinstance(raw, str) and 'Sensitivity < 0.8' in raw:
+            return {
+                'Status':'Sensitivity < 0.8',
+                'Submission time':row['Submission time'],
+                'Team name':row['Team name'],
+                'Affiliation':row.get('Affiliation',''),
+                'Weighted Score':None,
+                'Scaled Weighted Score':None,
+                'AUPRC':None,
+                'Net Benefit':None,
+                'ECE':None,
+                'F1':None,
+                'Sensitivity':None,
+                'Specificity':None,
+                'Parsimony Score':None,
+                'TP':None,'FP':None,'FN':None,'TN':None,
+                'AUC':None
+            }
 
-        if isinstance(raw, str) and "Sensitivity < 0.8" in raw:
-            return {"Status": "Sensitivity < 0.8", "Submission time": row.get("Submission time"), "Team name": row.get("Team name")}
-
+        # Parse JSON metrics
         try:
             data = json.loads(raw)
-            score = data.get("score", {})
-            sensitivity = score.get("Sensitivity", None)
-            return {
-                "Status": "Complete" if (sensitivity is not None and sensitivity >= 0.80) else "Low Sensitivity",
-                "Submission time": row.get("Submission time"),
-                "Team name": row.get("Team name"),
-                "Weighted Score": score.get("weighted_score"),
-                "Scaled Weighted Score": score.get("scaled_weighted_score"),
-                "AUPRC": score.get("AUPRC"),
-                "Net Benefit": score.get("Net Benefit"),
-                "ECE": score.get("ECE"),
-                "F1": score.get("F1"),
-                "Sensitivity": sensitivity,
-                "Specificity": score.get("Specificity"),
-                "Parsimony Score": 1-score.get("Parsimony Score"),
-                "Inference Time": score.get("Inference Time"),
-                "Threshold Used": score.get("threshold_used"),
-                "TP": score.get("tp"),
-                "FP": score.get("fp"),
-                "FN": score.get("fn"),
-                "TN": score.get("tn"),
-                "AUC": score.get("AUC")
+            score = data.get('score', {})
+            sens = score.get('Sensitivity')
+            result = {
+                'Submission time': row['Submission time'],
+                'Team name': row['Team name'],
+                'Affiliation': row.get('Affiliation',''),
+                'Weighted Score': score.get('weighted_score'),
+                'Scaled Weighted Score': score.get('scaled_weighted_score'),
+                'AUPRC': score.get('AUPRC'),
+                'Net Benefit': score.get('Net Benefit'),
+                'ECE': score.get('ECE'),
+                'F1': score.get('F1'),
+                'Sensitivity': sens,
+                'Specificity': score.get('Specificity'),
+                'Parsimony Score': 1 - score.get('Parsimony Score', 0),
+                'TP': score.get('tp'),
+                'FP': score.get('fp'),
+                'FN': score.get('fn'),
+                'TN': score.get('tn'),
+                'AUC': score.get('AUC')
             }
-        except:
-            return {"Status": "Error", "Submission time": row.get("Submission time"), "Team name": row.get("Team name")}
+            # Assign status
+            if is_error:
+                result['Status'] = 'Error'
+            elif is_late:
+                result['Status'] = 'Late'
+            else:
+                result['Status'] = 'Complete' if (sens is not None and sens >= 0.80) else 'Low Sensitivity'
+            return result
+        except (json.JSONDecodeError, TypeError):
+            return {
+                'Status':'Error',
+                'Submission time':row['Submission time'],
+                'Team name':row['Team name'],
+                'Affiliation':row.get('Affiliation','')
+            }
+        
+    parsed = df.apply(extract_metrics, axis=1, result_type='expand')
+    parsed['Country'] = df['Country_clean']
+    parsed = parsed[parsed['Team name'].notna()]
+    parsed['TeamID'] = parsed['Team name']
+    parsed['Team name'] = parsed['Team name'].map(team_flag_map)
 
-    # Apply extraction
-    parsed_df = df.apply(extract_metrics, axis=1, result_type="expand")
+    # Round numeric metrics
+    nums = parsed.select_dtypes(include='number').columns.difference(['Threshold Used','Inference Time'])
+    parsed[nums] = parsed[nums].round(2)
 
-    # Remove missing team names
-    parsed_df = parsed_df[parsed_df["Team name"].notna() & (parsed_df["Team name"].str.strip() != "")]
+    # Split into complete and flagged (Late, Error, Low Sensitivity)
+    complete = parsed[parsed['Status']=='Complete']
+    flagged = parsed[parsed['Status']!='Complete']
 
-    #parsed_df["TeamDisplay"] = parsed_df["Team name"].map(team_flag_map)
-    parsed_df["Team name"] = parsed_df["Team name"].map(team_flag_map)
-    # Round numeric columns
-    num_cols = parsed_df.select_dtypes(include="number").columns.difference(["Threshold Used", "Inference Time"])
-    parsed_df[num_cols] = parsed_df[num_cols].round(2)
+        # Prepare complete table
+    complete_sorted = complete.sort_values('Scaled Weighted Score', ascending=False).reset_index(drop=True)
+    complete_sorted.insert(0, 'Rank', complete_sorted.index + 1)
+    # Only show up through AUC, then status and submission time
+    cols = ['Rank', 'Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
+    complete_sorted = complete_sorted[cols + ['Status', 'Submission time']]
 
-    # Split into groups
-    complete_df = parsed_df[parsed_df["Status"] == "Complete"]
-    low_sens_df = parsed_df[parsed_df["Status"].isin(["Low Sensitivity", "Sensitivity < 0.8"])]
-    error_df = parsed_df[parsed_df["Status"] == "Error"]
+    st.subheader('✅ Complete Submissions')
+    st.dataframe(complete_sorted, use_container_width=True, hide_index=True, height=600)
 
-    # Display Complete Submissions prominently with more height
-    # Sort complete submissions and add Rank column
-    complete_sorted = complete_df.sort_values(by="Scaled Weighted Score", ascending=False).reset_index(drop=True)
-    complete_sorted.insert(0, "Rank", complete_sorted.index + 1)
-
-    # Move 'Status' and 'Submission time' to the end
-    # Desired insertion after F1
-    cols = list(complete_sorted.columns)
-
-    # Start with default order, then rearrange
-    front = ["Rank", "Team name", "Weighted Score", "Scaled Weighted Score", "AUPRC", "Net Benefit", "ECE", "F1"]
-    after_f1 = ["TP", "FP", "FN", "TN"]
-    rest = [c for c in cols if c not in (front + after_f1 + ["Status", "Submission time"])]
-    final_order = front + after_f1 + rest + ["Status", "Submission time"]
-
-    complete_sorted = complete_sorted[final_order]
-
-    # Display Complete Submissions
-    st.subheader("✅ Complete Submissions")
-    st.dataframe(
-        complete_sorted,
-        use_container_width=True,
-        hide_index=True,
-        height=600
-    )
-
-    # Wrap flagged submissions inside an expandable section
-    with st.expander("⚠️ Click to view Flagged / Low Sensitivity / Error Submissions"):
-        st.dataframe(
-            pd.concat([low_sens_df, error_df])
-            .sort_values(by="Scaled Weighted Score", ascending=False)
-            [["Team name"] + [col for col in error_df.columns if col != "Team name"]],
-            use_container_width=True,
-            hide_index=True
-        )
+    with st.expander('⚠️ View Flagged/Error/Late Submissions'):
+        flagged_sorted = flagged.sort_values('Scaled Weighted Score', ascending=False).reset_index(drop=True)
+        flagged_sorted.insert(0, 'Rank', flagged_sorted.index + 1)
+        flagged_sorted = flagged_sorted[cols + ['Status', 'Submission time']]
+        st.dataframe(flagged_sorted, use_container_width=True, hide_index=True)
 
     #st.subheader("❌ Submissions with Errors (Flag/Error)")
     #st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
