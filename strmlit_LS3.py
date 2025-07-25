@@ -477,16 +477,28 @@ elif option == "Final Phase Leaderboard":
     st.subheader('✅ Complete Submissions')
     st.dataframe(complete_sorted, use_container_width=True, hide_index=True, height=600)
 
+    # Best performance per team (exclude Late)
+    best_df = (
+        parsed[parsed['Status']=='Complete']
+              .sort_values('Scaled Weighted Score', ascending=False)
+              .drop_duplicates(subset='TeamID')
+              .reset_index(drop=True)
+    )
+    best_df.insert(0, 'Team Rank', best_df.index+1)
+    best_cols = ['Team Rank','Team name','Affiliation','Scaled Weighted Score']
+    st.subheader('🏆 Best Performance per Team')
+    st.dataframe(best_df[best_cols], use_container_width=True, hide_index=True)
+
     with st.expander('⚠️ View Flagged/Error/Late Submissions'):
         flagged_sorted = flagged.sort_values('Scaled Weighted Score', ascending=False).reset_index(drop=True)
-        flagged_sorted.insert(0, 'Rank', flagged_sorted.index + 1)
+        #flagged_sorted.insert(0, 'Rank', flagged_sorted.index + 1)
+        cols = ['Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
         flagged_sorted = flagged_sorted[cols + ['Status', 'Submission time']]
         st.dataframe(flagged_sorted, use_container_width=True, hide_index=True)
 
     #st.subheader("❌ Submissions with Errors (Flag/Error)")
     #st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
     #            use_container_width=True, hide_index=True)
-    
     
 
 
