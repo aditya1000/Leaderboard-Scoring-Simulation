@@ -467,10 +467,11 @@ elif option == "Final Phase Leaderboard":
     complete = parsed[parsed['Status']=='Complete']
     flagged = parsed[parsed['Status']!='Complete']
 
-        # Prepare complete table
-    complete_sorted = complete.sort_values('Scaled Weighted Score', ascending=False).reset_index(drop=True)
-    complete_sorted.insert(0, 'Rank', complete_sorted.index + 1)
-    # Only show up through AUC, then status and submission time
+    # Complete leaderboard with ties sharing the same rank
+    complete_sorted = complete.sort_values('Scaled Weighted Score', ascending=False).copy()
+    # Dense ranking: same scaled score → same rank
+    complete_sorted['Rank'] = complete_sorted['Scaled Weighted Score'].rank(method='dense', ascending=False).astype(int)
+    # Reset index for display order
     cols = ['Rank', 'Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
     complete_sorted = complete_sorted[cols + ['Status', 'Submission time']]
 
