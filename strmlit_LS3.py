@@ -347,7 +347,7 @@ elif option == "Final Phase Leaderboard":
 
     # Sidebar
     st.sidebar.markdown("---")
-    st.sidebar.markdown("ℹ️ **Leaderboard weighted scoring only includes models with Sensitivity ≥ 0.8. Submissions after the 19th are marked Late.**")
+    st.sidebar.markdown("ℹ️ **Leaderboard weighted scoring only includes models with Sensitivity ≥ 0.8. Submissions after July 18th, 2025 are marked Late.**")
     st.sidebar.markdown("### ⚙️ Scaling Parameters")
     st.sidebar.markdown("**Fixed Factor Loadings:**")
     st.sidebar.json(factor_loadings)
