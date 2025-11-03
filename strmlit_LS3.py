@@ -191,7 +191,7 @@ if option == "Phase-1 Leaderboard Ranking":
             st.subheader("Full Leaderboard Ranking")
             
             # Define the internal display columns.
-            display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Norm_inf"] #, "Compute_1", "Compute_2"]
+            display_cols = ["Rank", "team", "Country_Flag", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Inference Time", "Norm_inf"] #, "Compute_1", "Compute_2"]
             #display_cols = ["Rank", "team", "Score", "AUC", "AUPRC", "Net Benefit", "ECE", "Norm_inf"] #, "Compute_1", "Compute_2"]
 
             # Mapping from your internal column names to the names you want to show.
@@ -203,6 +203,7 @@ if option == "Phase-1 Leaderboard Ranking":
                 "AUPRC": "AUPRC",
                 "Net Benefit": "Net Benefit",
                 "ECE": "ECE",
+                "Inference Time": "Inference Time",
                 "Norm_inf": "Normalized Inference Time"#,
                 #"Compute_1": "Memory Usage (MB)",
                 #"Compute_2": "CPU time (s)"
@@ -431,6 +432,7 @@ elif option == "Final Phase Leaderboard":
                 'Sensitivity': sens,
                 'Specificity': score.get('Specificity'),
                 'Parsimony Score': 1 - score.get('Parsimony Score', 0),
+                'Inference Time': score.get('Inference Time'),
                 'TP': score.get('tp'),
                 'FP': score.get('fp'),
                 'FN': score.get('fn'),
@@ -472,7 +474,7 @@ elif option == "Final Phase Leaderboard":
     # Dense ranking: same scaled score → same rank
     complete_sorted['Rank'] = complete_sorted['Scaled Weighted Score'].rank(method='dense', ascending=False).astype(int)
     # Reset index for display order
-    cols = ['Rank', 'Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
+    cols = ['Rank', 'Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'Parsimony Score', 'Inference Time', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
     complete_sorted = complete_sorted[cols + ['Status', 'Submission time']]
 
     st.subheader('✅ Complete Submissions')
@@ -493,9 +495,80 @@ elif option == "Final Phase Leaderboard":
     with st.expander('⚠️ View Flagged/Error/Late Submissions'):
         flagged_sorted = flagged.sort_values('Scaled Weighted Score', ascending=False).reset_index(drop=True)
         #flagged_sorted.insert(0, 'Rank', flagged_sorted.index + 1)
-        cols = ['Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
+        cols = ['Team name', 'Affiliation', 'Weighted Score', 'Scaled Weighted Score', 'AUPRC', 'Net Benefit', 'ECE', 'Parsimony Score', 'Inference Time', 'F1', 'TP', 'FP', 'FN', 'TN', 'AUC']
         flagged_sorted = flagged_sorted[cols + ['Status', 'Submission time']]
         st.dataframe(flagged_sorted, use_container_width=True, hide_index=True)
+
+    # Map teams to geographic locations similar to Phase 1
+    best_geo_map = (
+        parsed[parsed['Status'] == 'Complete']
+              .sort_values('Scaled Weighted Score', ascending=False)
+              .drop_duplicates(subset='TeamID')
+              .copy()
+    )
+
+    if not best_geo_map.empty:
+        best_geo_map['Affiliation'] = best_geo_map['Affiliation'].fillna('').str.strip()
+        best_geo_map['Country'] = best_geo_map['Country'].fillna('').str.strip()
+        best_geo_map['primaryCountry'] = best_geo_map['Country'].apply(lambda x: str(x).split(',')[0].strip() if x else '')
+
+        def build_team_info(row):
+            details = [row['Affiliation'], row['Country']]
+            joined = ', '.join([part for part in details if part])
+            return f"{row['Team name']}\n({joined})" if joined else row['Team name']
+
+        best_geo_map['teamInfo'] = best_geo_map.apply(build_team_info, axis=1)
+        best_geo_map['ScoreText'] = best_geo_map['Scaled Weighted Score'].apply(lambda s: f"{s:.2f}" if pd.notnull(s) else "N/A")
+
+        best_geo_map['lat'] = best_geo_map['primaryCountry'].apply(lambda c: get_lat_lon_manual(c).get('lat'))
+        best_geo_map['lon'] = best_geo_map['primaryCountry'].apply(lambda c: get_lat_lon_manual(c).get('lon'))
+        best_geo_map = best_geo_map.dropna(subset=['lat', 'lon'])
+
+        if not best_geo_map.empty:
+            grouped_map = best_geo_map.groupby('primaryCountry').apply(
+                lambda x: pd.Series({
+                    'teams_scores': "<br/>".join([
+                        f"{row['teamInfo']}: {row['ScoreText']}" for _, row in x.iterrows()
+                    ]),
+                    'lat': x['lat'].iloc[0],
+                    'lon': x['lon'].iloc[0],
+                    'primaryCountry': x['primaryCountry'].iloc[0]
+                })
+            ).reset_index(drop=True)
+
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=grouped_map,
+                get_position=["lon", "lat"],
+                get_fill_color="[0, 128, 200, 160]",
+                get_radius=200000,
+                pickable=True,
+            )
+
+            view_state = pdk.ViewState(
+                latitude=20,
+                longitude=0,
+                zoom=1,
+                pitch=0
+            )
+
+            tooltip = {
+                "html": """
+                <div style="display: flex; flex-direction: row; justify-content: space-between; font-size: 12px;">
+                <div style="margin-right: 10px;"> {primaryCountry}</div>
+                <div style="margin-left: 10px;"><b>Teams & Scores:</b><br/>{teams_scores}</div>
+                </div>
+                """
+            }
+
+            deck = pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip=tooltip
+            )
+
+            st.subheader('Teams on the world map')
+            st.pydeck_chart(deck)
 
     #st.subheader("❌ Submissions with Errors (Flag/Error)")
     #st.dataframe(error_df.sort_values(by="Scaled Weighted Score", ascending=False),
