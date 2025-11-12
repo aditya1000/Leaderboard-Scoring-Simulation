@@ -24,20 +24,6 @@
             121.4375,
             0.52
         ],
-        "Institution": "University of Wisconsin ",
-        "Country": "USA"
-    },
-    {
-        "team": "BadgerDataScience",
-        "AUC": 0.8132986406903959,
-        "AUPRC": 0.19640766117780295,
-        "Net Benefit": 0.0,
-        "ECE": 0.011811680278019114,
-        "Inference Time": 0.00012384333333333332,
-        "Compute": [
-            121.4375,
-            0.52
-        ],
         "Institution": "University of Wisconsin",
         "Country": "USA"
     },
